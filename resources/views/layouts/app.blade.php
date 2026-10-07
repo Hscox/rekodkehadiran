@@ -14,7 +14,7 @@
             --ln-bg: #f8fafc;
             --ln-card: #ffffff;
             --ln-card-inner: #f1f5f9;
-            --ln-border: #e2e8f0;
+            --ln-border: #000000;
             --ln-neon: #D2FF00;
             --ln-neon-glow: rgba(210, 255, 0, 0.45);
             --ln-dark: #0f172a;
@@ -32,7 +32,7 @@
 
         .custom-navbar {
             background-color: #ffffff !important;
-            border-bottom: 1px solid var(--ln-border);
+            border-bottom: 1.5px solid #000000 !important;
         }
 
         .custom-navbar .navbar-brand {
@@ -55,19 +55,19 @@
 
         .card {
             background-color: var(--ln-card) !important;
-            border: 1px solid var(--ln-border) !important;
+            border: 1.5px solid #000000 !important;
             color: var(--ln-text) !important;
             box-shadow: 0 4px 18px -2px rgba(15, 23, 42, 0.04) !important;
         }
 
         .card-header {
-            border-bottom: 1px solid var(--ln-border) !important;
+            border-bottom: 1.5px solid #000000 !important;
         }
 
         .btn-ln-neon {
             background-color: var(--ln-neon) !important;
             color: #000000 !important;
-            border: 1px solid #bce600 !important;
+            border: 1.5px solid #000000 !important;
             font-weight: 800 !important;
             transition: all 0.2s ease;
         }
@@ -75,13 +75,14 @@
         .btn-ln-neon:hover {
             background-color: #e2ff40 !important;
             color: #000000 !important;
+            border-color: #000000 !important;
             transform: translateY(-2px);
             box-shadow: 0 6px 20px var(--ln-neon-glow) !important;
         }
 
         .btn-logout {
             color: #ef4444 !important;
-            border: 1px solid rgba(239, 68, 68, 0.25) !important;
+            border: 1.5px solid #000000 !important;
             background: rgba(239, 68, 68, 0.05);
             font-weight: 600;
             transition: all 0.2s ease;
@@ -90,17 +91,17 @@
         .btn-logout:hover {
             background-color: #ef4444 !important;
             color: #ffffff !important;
-            border-color: #ef4444 !important;
+            border-color: #000000 !important;
         }
 
         .form-control, .form-select {
             background-color: #ffffff !important;
-            border: 1px solid #cbd5e1 !important;
+            border: 1.5px solid #000000 !important;
             color: var(--ln-dark) !important;
         }
 
         .form-control:focus, .form-select:focus {
-            border-color: #94a3b8 !important;
+            border-color: #000000 !important;
             box-shadow: 0 0 0 0.25rem rgba(210, 255, 0, 0.35) !important;
             color: var(--ln-dark) !important;
         }
@@ -111,38 +112,42 @@
 
         .table {
             color: var(--ln-text) !important;
-            border-color: var(--ln-border) !important;
+            border-color: #000000 !important;
         }
 
         .table > :not(caption) > * > * {
             padding: 0.95rem 0.85rem;
             background-color: transparent !important;
             color: inherit !important;
-            border-bottom-color: var(--ln-border) !important;
+            border-bottom: 1px solid #000000 !important;
         }
 
         .table-light {
             background-color: #f8fafc !important;
             color: var(--ln-text-muted) !important;
-            border-bottom: 1px solid var(--ln-border) !important;
+            border-bottom: 1.5px solid #000000 !important;
         }
 
         .badge-ln-neon {
             background-color: var(--ln-neon) !important;
             color: #000000 !important;
-            border: 1px solid #bce600 !important;
+            border: 1.5px solid #000000 !important;
             font-weight: 700;
+        }
+
+        .border, .border-top, .border-bottom, .border-start, .border-end {
+            border-color: #000000 !important;
         }
 
         .alert-success {
             background-color: rgba(210, 255, 0, 0.15) !important;
-            border-color: rgba(210, 255, 0, 0.4) !important;
+            border: 1.5px solid #000000 !important;
             color: #1e293b !important;
         }
 
         .alert-danger {
             background-color: #fef2f2 !important;
-            border-color: #fecaca !important;
+            border: 1.5px solid #000000 !important;
             color: #991b1b !important;
         }
     </style>
@@ -176,7 +181,7 @@
             
             <div class="d-flex align-items-center">
                 <span class="me-3 small text-dark"><strong>{{ Auth::user()->name }}</strong> <span class="badge badge-ln-neon ms-1">{{ ucfirst(Auth::user()->role) }}</span></span>
-                <form action="{{ route('logout') }}" method="POST" class="m-0">
+                <form action="{{ route('logout') }}" method="POST" class="m-0" onsubmit="return confirm('Adakah anda pasti ingin log keluar?');">
                     @csrf
                     <button type="submit" class="btn btn-logout btn-sm rounded-pill px-3">Log keluar</button>
                 </form>

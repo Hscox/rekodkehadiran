@@ -156,7 +156,7 @@ test('admin can view staff attendance record for the month', function () {
     ]));
 
     $response->assertOk();
-    $response->assertSee('Ahmad Albab');
+    $response->assertSee('AHMAD ALBAB');
     $response->assertSee('STF100');
     $response->assertSee('Hadir Penuh');
 });
@@ -193,7 +193,7 @@ test('admin can create new staff and view staff list', function () {
 
     $this->assertDatabaseHas('users', [
         'staff_id' => 'STF888',
-        'name' => 'Siti Aminah',
+        'name' => 'SITI AMINAH',
         'role' => 'staff',
     ]);
 });
@@ -293,4 +293,101 @@ test('staff and admin can export monthly attendance report to PDF using TCPDF', 
     $response->assertOk();
     $response->assertHeader('Content-Type', 'application/pdf');
     expect($response->getContent())->toStartWith('%PDF');
+});
+
+test('admin can view edit staff form', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+    ]);
+    $staff = User::factory()->create([
+        'role' => 'staff',
+        'name' => 'Siti Aminah',
+    ]);
+
+    $response = $this->actingAs($admin)->get(route('admin.editStaff', $staff->id));
+
+    $response->assertOk();
+    $response->assertSee('SITI AMINAH');
+});
+
+test('admin can update staff name and password', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+    ]);
+    $staff = User::factory()->create([
+        'role' => 'staff',
+        'name' => 'Ahmad Albab',
+        'password' => 'oldpassword123',
+    ]);
+
+    $response = $this->actingAs($admin)->put(route('admin.updateStaff', $staff->id), [
+        'name' => 'Ahmad Albab Updated',
+        'password' => 'newpassword123',
+    ]);
+
+    $response->assertRedirect(route('admin.createStaff'));
+    $response->assertSessionHas('success');
+
+    $staff->refresh();
+    expect($staff->name)->toBe('AHMAD ALBAB UPDATED');
+    expect(Hash::check('newpassword123', $staff->password))->toBeTrue();
+});
+
+test('admin can update staff name without changing password', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+    ]);
+    $staff = User::factory()->create([
+        'role' => 'staff',
+        'name' => 'Ahmad Albab',
+        'password' => 'oldpassword123',
+    ]);
+
+    $response = $this->actingAs($admin)->put(route('admin.updateStaff', $staff->id), [
+        'name' => 'ahmad albab new name',
+        'password' => '',
+    ]);
+
+    $response->assertRedirect(route('admin.createStaff'));
+    $response->assertSessionHas('success');
+
+    $staff->refresh();
+    expect($staff->name)->toBe('AHMAD ALBAB NEW NAME');
+    expect(Hash::check('oldpassword123', $staff->password))->toBeTrue();
+});
+
+test('staff cannot edit or update other staff accounts', function () {
+    $staff1 = User::factory()->create([
+        'role' => 'staff',
+    ]);
+    $staff2 = User::factory()->create([
+        'role' => 'staff',
+        'name' => 'Original Name',
+    ]);
+
+    $response = $this->actingAs($staff1)->get(route('admin.editStaff', $staff2->id));
+    $response->assertForbidden();
+
+    $response = $this->actingAs($staff1)->put(route('admin.updateStaff', $staff2->id), [
+        'name' => 'Hacked Name',
+    ]);
+    $response->assertForbidden();
+});
+
+test('staff name and staff_id are automatically uppercase even if entered in lowercase', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+    ]);
+
+    $response = $this->actingAs($admin)->post('/admin/create-staff', [
+        'staff_id' => 'stf009',
+        'name' => 'aisyah malik',
+        'password' => 'password123',
+    ]);
+
+    $response->assertRedirect();
+    $user = User::where('staff_id', 'STF009')->first();
+    expect($user)->not->toBeNull();
+    expect($user->name)->toBe('AISYAH MALIK');
+    expect($user->staff_id)->toBe('STF009');
 });

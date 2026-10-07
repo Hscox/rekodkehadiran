@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="card border-0 rounded-4 shadow-sm p-4">
+<div class="card rounded-4 shadow-sm p-4" style="border: 1.5px solid #000000 !important;">
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
         <div>
             <h4 class="mb-1 fw-bold fs-5" style="color: var(--ln-dark);">Rekod Kehadiran Kakitangan</h4>
@@ -9,18 +9,18 @@
         </div>
         
         @if($selectedUser)
-            <form method="GET" action="{{ route('report') }}" class="d-flex gap-2 flex-wrap align-items-center p-2 rounded-3 border" style="background-color: #f8fafc; border-color: var(--ln-border) !important;">
+            <form method="GET" action="{{ route('report') }}" class="d-flex gap-2 flex-wrap align-items-center p-2 rounded-3 border" style="background-color: #f8fafc; border: 1.5px solid #000000 !important;">
                 @if(Auth::user()->role === 'admin' && count($allStaffs) > 0)
-                    <select name="user_id" class="form-select form-select-sm shadow-none" style="background-color: #ffffff; color: var(--ln-dark); border: 1px solid #cbd5e1;">
+                    <select name="user_id" class="form-select form-select-sm shadow-none" style="background-color: #ffffff; color: var(--ln-dark); border: 1.5px solid #000000 !important;">
                         @foreach($allStaffs as $stf)
                             <option value="{{ $stf->id }}" {{ $selectedUser->id == $stf->id ? 'selected' : '' }}>
-                                {{ $stf->staff_id }} - {{ $stf->name }}
+                                {{ strtoupper($stf->staff_id . ' - ' . $stf->name) }}
                             </option>
                         @endforeach
                     </select>
                 @endif
 
-                <select name="month" class="form-select form-select-sm shadow-none" style="width: auto; background-color: #ffffff; color: var(--ln-dark); border: 1px solid #cbd5e1;">
+                <select name="month" class="form-select form-select-sm shadow-none" style="width: auto; background-color: #ffffff; color: var(--ln-dark); border: 1.5px solid #000000 !important;">
                     @for($m = 1; $m <= 12; $m++)
                         <option value="{{ $m }}" {{ $month == $m ? 'selected' : '' }}>
                             Bulan {{ $m }}
@@ -28,15 +28,15 @@
                     @endfor
                 </select>
 
-                <select name="year" class="form-select form-select-sm shadow-none" style="width: auto; background-color: #ffffff; color: var(--ln-dark); border: 1px solid #cbd5e1;">
+                <select name="year" class="form-select form-select-sm shadow-none" style="width: auto; background-color: #ffffff; color: var(--ln-dark); border: 1.5px solid #000000 !important;">
                     @php $curYear = (int) date('Y'); @endphp
                     @for($y = $curYear + 1; $y >= $curYear - 3; $y--)
                         <option value="{{ $y }}" {{ $year == $y ? 'selected' : '' }}>{{ $y }}</option>
                     @endfor
                 </select>
 
-                <button type="submit" class="btn btn-sm btn-ln-neon px-3 rounded-2">Cari</button>
-                <a href="{{ route('report.exportPdf', ['user_id' => $selectedUser->id, 'month' => $month, 'year' => $year]) }}" target="_blank" class="btn btn-sm btn-outline-dark px-3 rounded-2 fw-bold">
+                <button type="submit" class="btn btn-sm btn-ln-neon px-3 rounded-2" style="border: 1.5px solid #000000 !important;">Cari</button>
+                <a href="{{ route('report.exportPdf', ['user_id' => $selectedUser->id, 'month' => $month, 'year' => $year]) }}" target="_blank" class="btn btn-sm btn-outline-dark px-3 rounded-2 fw-bold" style="border: 1.5px solid #000000 !important;">
                     Cetak PDF
                 </a>
             </form>
@@ -46,14 +46,14 @@
     @if($selectedUser)
         <div class="row g-3 mb-4">
             <div class="col-12 col-md-8">
-                <div class="p-3 rounded-3 border h-100 d-flex flex-wrap align-items-center justify-content-between gap-3" style="background-color: #f8fafc; border-color: var(--ln-border) !important;">
+                <div class="p-3 rounded-3 border h-100 d-flex flex-wrap align-items-center justify-content-between gap-3" style="background-color: #f8fafc; border: 1.5px solid #000000 !important;">
                     <div class="d-flex align-items-center gap-3">
                         <div class="rounded-circle fw-bold d-flex align-items-center justify-content-center flex-shrink-0" style="width: 38px; height: 38px; background-color: var(--ln-neon); color: #000000; border: 1.5px solid #000000;">
                             {{ strtoupper(substr($selectedUser->name, 0, 1)) }}
                         </div>
                         <div>
                             <span class="small d-block" style="font-size: 0.72rem; color: var(--ln-text-muted);">Nama kakitangan</span>
-                            <span class="fs-6 fw-bold" style="color: var(--ln-dark);">{{ $selectedUser->name }}</span>
+                            <span class="fs-6 fw-bold text-uppercase" style="color: var(--ln-dark);">{{ $selectedUser->name }}</span>
                         </div>
                     </div>
                     <div class="d-flex gap-4">
@@ -69,12 +69,12 @@
                 </div>
             </div>
             <div class="col-12 col-md-4">
-                <div class="p-3 rounded-3 h-100 d-flex justify-content-around align-items-center text-center" style="background-color: rgba(210, 255, 0, 0.15); border: 1.5px solid rgba(210, 255, 0, 0.5);">
+                <div class="p-3 rounded-3 h-100 d-flex justify-content-around align-items-center text-center" style="background-color: rgba(210, 255, 0, 0.15); border: 1.5px solid #000000 !important;">
                     <div>
                         <span class="small d-block" style="font-size: 0.72rem; color: var(--ln-text-muted);">Jumlah masa</span>
                         <span class="fs-4 fw-bold font-monospace" style="color: var(--ln-dark);">{{ $grandTotalFormatted }}</span>
                     </div>
-                    <div class="border-start ps-4" style="border-color: rgba(0, 0, 0, 0.1) !important;">
+                    <div class="border-start ps-4" style="border-color: #000000 !important; border-left-width: 1.5px !important;">
                         <span class="small d-block" style="font-size: 0.72rem; color: var(--ln-text-muted);">Jumlah skor</span>
                         <span class="fs-4 fw-bold font-monospace" style="color: var(--ln-dark);">{{ number_format($totalSkor, 1) }}</span>
                     </div>
@@ -82,9 +82,9 @@
             </div>
         </div>
 
-        <div class="table-responsive rounded-3 border" style="border-color: var(--ln-border) !important;">
-            <table class="table table-hover align-middle text-center mb-0">
-                <thead class="table-light small border-bottom">
+        <div class="table-responsive rounded-3 border" style="border: 1.5px solid #000000 !important;">
+            <table class="table table-hover align-middle text-center mb-0" style="border-color: #000000 !important;">
+                <thead class="table-light small border-bottom" style="border-bottom: 1.5px solid #000000 !important;">
                     <tr>
                         <th style="width: 6%;">HB</th>
                         <th style="width: 32%;">Keterangan</th>
@@ -133,7 +133,7 @@
                         </tr>
                     @endforelse
                 </tbody>
-                <tfoot class="table-light fw-bold border-top">
+                <tfoot class="table-light fw-bold border-top" style="border-top: 1.5px solid #000000 !important;">
                     <tr>
                         <td colspan="5" class="text-end small" style="color: var(--ln-text-muted);">Jumlah keseluruhan:</td>
                         <td class="font-monospace" style="color: var(--ln-dark);">{{ $grandTotalFormatted }}</td>
@@ -143,11 +143,11 @@
             </table>
         </div>
     @else
-        <div class="alert alert-info text-center py-5 my-3 rounded-4" style="background-color: #f8fafc; border: 1px solid var(--ln-border); color: var(--ln-dark);">
+        <div class="alert alert-info text-center py-5 my-3 rounded-4" style="background-color: #f8fafc; border: 1.5px solid #000000 !important; color: var(--ln-dark);">
             <h5 class="fw-bold mb-2">Tiada kakitangan berdaftar</h5>
             <p class="mb-3" style="color: var(--ln-text-muted);">Belum ada kakitangan yang didaftarkan dalam sistem untuk dilihat rekod kehadirannya.</p>
             @if(Auth::user()->role === 'admin')
-                <a href="{{ route('admin.createStaff') }}" class="btn btn-ln-neon rounded-pill px-4">Daftar staf sekarang</a>
+                <a href="{{ route('admin.createStaff') }}" class="btn btn-ln-neon rounded-pill px-4" style="border: 1.5px solid #000000 !important;">Daftar staf sekarang</a>
             @endif
         </div>
     @endif

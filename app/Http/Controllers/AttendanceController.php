@@ -206,6 +206,7 @@ class AttendanceController extends Controller
         ));
     }
 
+    // tcpdf function to export monthly report to pdf
     public function exportPdf(Request $request)
     {
         self::autoClockOutForgottenSessions();

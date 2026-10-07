@@ -42,6 +42,43 @@ class AdminController extends Controller
         return back()->with('success', 'Akaun staf berjaya didaftarkan.');
     }
 
+    public function editStaffForm(int $id)
+    {
+        if (Auth::user()->role !== 'admin') {
+            abort(403, 'Akses tidak dibenarkan.');
+        }
+
+        $staff = User::where('role', 'staff')->findOrFail($id);
+
+        return view('admin.edit-staff', compact('staff'));
+    }
+
+    public function updateStaff(Request $request, int $id)
+    {
+        if (Auth::user()->role !== 'admin') {
+            abort(403, 'Akses tidak dibenarkan.');
+        }
+
+        $staff = User::where('role', 'staff')->findOrFail($id);
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'password' => 'nullable|string|min:6',
+        ]);
+
+        $updateData = [
+            'name' => $request->name,
+        ];
+
+        if ($request->filled('password')) {
+            $updateData['password'] = Hash::make($request->password);
+        }
+
+        $staff->update($updateData);
+
+        return redirect()->route('admin.createStaff')->with('success', 'Maklumat staf berjaya dikemaskini.');
+    }
+
     public function deleteStaff(int $id)
     {
         if (Auth::user()->role !== 'admin') {

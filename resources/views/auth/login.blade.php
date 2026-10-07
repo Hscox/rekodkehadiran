@@ -14,7 +14,7 @@
             --ln-bg: #f8fafc;
             --ln-card: #ffffff;
             --ln-card-inner: #f1f5f9;
-            --ln-border: #e2e8f0;
+            --ln-border: #000000;
             --ln-neon: #D2FF00;
             --ln-neon-glow: rgba(210, 255, 0, 0.45);
             --ln-dark: #0f172a;
@@ -32,19 +32,19 @@
 
         .card {
             background-color: var(--ln-card) !important;
-            border: 1px solid var(--ln-border) !important;
+            border: 1.5px solid #000000 !important;
             color: var(--ln-text) !important;
             box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05) !important;
         }
 
         .form-control {
             background-color: #ffffff !important;
-            border: 1px solid #cbd5e1 !important;
+            border: 1.5px solid #000000 !important;
             color: var(--ln-dark) !important;
         }
 
         .form-control:focus {
-            border-color: #94a3b8 !important;
+            border-color: #000000 !important;
             box-shadow: 0 0 0 0.25rem rgba(210, 255, 0, 0.35) !important;
             color: var(--ln-dark) !important;
         }
@@ -56,7 +56,7 @@
         .btn-ln-neon {
             background-color: var(--ln-neon) !important;
             color: #000000 !important;
-            border: 1px solid #bce600 !important;
+            border: 1.5px solid #000000 !important;
             font-weight: 800 !important;
             letter-spacing: 0.2px;
             transition: all 0.2s ease;
@@ -65,13 +65,14 @@
         .btn-ln-neon:hover {
             background-color: #e2ff40 !important;
             color: #000000 !important;
+            border-color: #000000 !important;
             transform: translateY(-2px);
             box-shadow: 0 6px 20px var(--ln-neon-glow) !important;
         }
 
         .alert-danger {
             background-color: #fef2f2 !important;
-            border-color: #fecaca !important;
+            border: 1.5px solid #000000 !important;
             color: #991b1b !important;
         }
     </style>
