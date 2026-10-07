@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Hash;
 
 class AdminController extends Controller
 {
-    public function createStaffForm()
+    public function staffList()
     {
         if (Auth::user()->role !== 'admin') {
             abort(403, 'Akses tidak dibenarkan.');
@@ -17,7 +17,16 @@ class AdminController extends Controller
 
         $staffs = User::where('role', 'staff')->orderBy('created_at', 'desc')->get();
 
-        return view('admin.create-staff', compact('staffs'));
+        return view('admin.staff-list', compact('staffs'));
+    }
+
+    public function createStaffForm()
+    {
+        if (Auth::user()->role !== 'admin') {
+            abort(403, 'Akses tidak dibenarkan.');
+        }
+
+        return view('admin.create-staff');
     }
 
     public function storeStaff(Request $request)
@@ -39,7 +48,7 @@ class AdminController extends Controller
             'role' => 'staff',
         ]);
 
-        return back()->with('success', 'Akaun staf berjaya didaftarkan.');
+        return redirect()->route('admin.staffList')->with('success', 'Akaun staf berjaya didaftarkan.');
     }
 
     public function editStaffForm(int $id)
@@ -76,7 +85,7 @@ class AdminController extends Controller
 
         $staff->update($updateData);
 
-        return redirect()->route('admin.createStaff')->with('success', 'Maklumat staf berjaya dikemaskini.');
+        return redirect()->route('admin.staffList')->with('success', 'Maklumat staf berjaya dikemaskini.');
     }
 
     public function deleteStaff(int $id)
@@ -89,6 +98,6 @@ class AdminController extends Controller
 
         $staff->delete();
 
-        return back()->with('success', 'Akaun staf berjaya dipadam.');
+        return redirect()->route('admin.staffList')->with('success', 'Akaun staf berjaya dipadam.');
     }
 }

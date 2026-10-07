@@ -1,15 +1,18 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="row g-4">
-    <div class="col-12 col-md-5">
+<div class="row justify-content-center">
+    <div class="col-12 col-md-6 col-lg-5">
         <div class="card rounded-4 shadow-sm" style="border: 1.5px solid #000000 !important;">
-            <div class="card-header bg-transparent py-3 px-4 border-bottom" style="border-bottom: 1.5px solid #000000 !important;">
+            <div class="card-header bg-transparent py-3 px-4 border-bottom d-flex justify-content-between align-items-center" style="border-bottom: 1.5px solid #000000 !important;">
                 <h5 class="card-title mb-0 fw-bold fs-6" style="color: var(--ln-dark);">Daftar Akaun Staf Baru</h5>
+                <a href="{{ route('admin.staffList') }}" class="btn btn-sm btn-outline-dark rounded-pill px-3" style="font-size: 0.75rem; border: 1.5px solid #000000 !important;">
+                    &larr; Senarai Staf
+                </a>
             </div>
             <div class="card-body p-4">
                 @if ($errors->any())
-                    <div class="alert alert-danger py-2 rounded-3 small" style="border: 1.5px solid #000000 !important;">
+                    <div class="alert alert-danger py-2 rounded-3 small mb-3" style="border: 1.5px solid #000000 !important;">
                         <ul class="mb-0 ps-3">
                             @foreach ($errors->all() as $error)
                                 <li>{{ $error }}</li>
@@ -35,66 +38,15 @@
                         <input type="password" class="form-control" id="password" name="password" required placeholder="Minimum 6 aksara" style="border: 1.5px solid #000000 !important;">
                     </div>
 
-                    <button type="submit" class="btn btn-ln-neon w-100 py-3 rounded-pill shadow-sm" style="border: 1.5px solid #000000 !important;">
-                        Daftar staf
-                    </button>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-ln-neon flex-fill py-2 rounded-pill shadow-sm" style="border: 1.5px solid #000000 !important;">
+                            Daftar staf
+                        </button>
+                        <a href="{{ route('admin.staffList') }}" class="btn btn-outline-secondary px-4 py-2 rounded-pill" style="border: 1.5px solid #000000 !important;">
+                            Batal
+                        </a>
+                    </div>
                 </form>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-12 col-md-7">
-        <div class="card rounded-4 shadow-sm" style="border: 1.5px solid #000000 !important;">
-            <div class="card-header bg-transparent py-3 px-4 border-bottom d-flex justify-content-between align-items-center" style="border-bottom: 1.5px solid #000000 !important;">
-                <h5 class="card-title mb-0 fw-bold fs-6" style="color: var(--ln-dark);">Senarai Kakitangan Berdaftar</h5>
-                <span class="badge badge-ln-neon rounded-pill px-3">{{ count($staffs) }} orang</span>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0 text-center" style="border-color: #000000 !important;">
-                        <thead class="table-light small border-bottom" style="border-bottom: 1.5px solid #000000 !important;">
-                            <tr>
-                                <th style="width: 6%;">#</th>
-                                <th style="width: 18%;">Staff ID</th>
-                                <th style="width: 32%;" class="text-start">Nama kakitangan</th>
-                                <th style="width: 18%;">Tarikh daftar</th>
-                                <th style="width: 26%;">Tindakan</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($staffs as $idx => $stf)
-                                <tr>
-                                    <td class="small fw-bold" style="color: var(--ln-text-muted);">{{ $idx + 1 }}</td>
-                                    <td><span class="badge badge-ln-neon fw-semibold">{{ $stf->staff_id }}</span></td>
-                                    <td class="text-start fw-semibold" style="color: var(--ln-dark);">{{ $stf->name }}</td>
-                                    <td class="small font-monospace" style="color: var(--ln-text-muted);">{{ $stf->created_at ? $stf->created_at->format('d/m/Y') : '-' }}</td>
-                                    <td>
-                                        <div class="d-flex gap-1 justify-content-center">
-                                            <a href="{{ route('admin.editStaff', $stf->id) }}" class="btn btn-outline-dark btn-sm rounded-pill px-3 py-1" style="font-size: 0.75rem; border: 1.5px solid #000000 !important;">
-                                                Kemaskini
-                                            </a>
-                                            <form method="POST" action="{{ route('admin.deleteStaff', $stf->id) }}" onsubmit="return confirm('Adakah anda pasti ingin memadam staf {{ $stf->name }} ({{ $stf->staff_id }})?');" class="d-inline">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-3 py-1" style="font-size: 0.75rem; border: 1.5px solid #000000 !important;">
-                                                    Padam
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="5" class="py-5" style="color: var(--ln-text-muted);">
-                                        <div class="d-flex flex-column align-items-center justify-content-center py-3">
-                                            <span class="small">Tiada staf didaftarkan lagi. Sila daftar staf menggunakan borang di sebelah.</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
             </div>
         </div>
     </div>

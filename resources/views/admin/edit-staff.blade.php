@@ -44,7 +44,7 @@
                         <button type="submit" class="btn btn-ln-neon flex-fill py-2 rounded-pill shadow-sm" style="border: 1.5px solid #000000 !important;">
                             Simpan perubahan
                         </button>
-                        <a href="{{ route('admin.createStaff') }}" class="btn btn-outline-secondary px-4 py-2 rounded-pill" style="border: 1.5px solid #000000 !important;">
+                        <a href="{{ route('admin.staffList') }}" class="btn btn-outline-secondary px-4 py-2 rounded-pill" style="border: 1.5px solid #000000 !important;">
                             Batal
                         </a>
                     </div>

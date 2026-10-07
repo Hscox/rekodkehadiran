@@ -17,6 +17,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/report-absent', [AttendanceController::class, 'reportAbsent'])->name('report.absent');
     Route::get('/report', [AttendanceController::class, 'monthlyReport'])->name('report');
     Route::get('/report/export-pdf', [AttendanceController::class, 'exportPdf'])->name('report.exportPdf');
+    Route::get('/admin/staff', [AdminController::class, 'staffList'])->name('admin.staffList');
     Route::get('/admin/create-staff', [AdminController::class, 'createStaffForm'])->name('admin.createStaff');
     Route::post('/admin/create-staff', [AdminController::class, 'storeStaff']);
     Route::get('/admin/staff/{id}/edit', [AdminController::class, 'editStaffForm'])->name('admin.editStaff');

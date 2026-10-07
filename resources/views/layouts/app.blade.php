@@ -174,6 +174,9 @@
                 </li>
                 @if(Auth::user()->role === 'admin')
                     <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('admin.staffList') ? 'active' : '' }}" href="{{ route('admin.staffList') }}">Senarai Kakitangan</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('admin.createStaff') ? 'active' : '' }}" href="{{ route('admin.createStaff') }}">Daftar Staff ID</a>
                     </li>
                 @endif

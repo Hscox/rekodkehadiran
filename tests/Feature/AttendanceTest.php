@@ -325,7 +325,7 @@ test('admin can update staff name and password', function () {
         'password' => 'newpassword123',
     ]);
 
-    $response->assertRedirect(route('admin.createStaff'));
+    $response->assertRedirect(route('admin.staffList'));
     $response->assertSessionHas('success');
 
     $staff->refresh();
@@ -348,7 +348,7 @@ test('admin can update staff name without changing password', function () {
         'password' => '',
     ]);
 
-    $response->assertRedirect(route('admin.createStaff'));
+    $response->assertRedirect(route('admin.staffList'));
     $response->assertSessionHas('success');
 
     $staff->refresh();
@@ -385,9 +385,33 @@ test('staff name and staff_id are automatically uppercase even if entered in low
         'password' => 'password123',
     ]);
 
-    $response->assertRedirect();
+    $response->assertRedirect(route('admin.staffList'));
     $user = User::where('staff_id', 'STF009')->first();
     expect($user)->not->toBeNull();
     expect($user->name)->toBe('AISYAH MALIK');
     expect($user->staff_id)->toBe('STF009');
+});
+
+test('admin can view dedicated staff list page', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+    ]);
+    $staff = User::factory()->create([
+        'role' => 'staff',
+        'name' => 'Kamal Adli',
+    ]);
+
+    $response = $this->actingAs($admin)->get(route('admin.staffList'));
+    $response->assertOk();
+    $response->assertSee('Senarai Kakitangan Berdaftar');
+    $response->assertSee('KAMAL ADLI');
+});
+
+test('non-admin cannot access admin staff list page', function () {
+    $staff = User::factory()->create([
+        'role' => 'staff',
+    ]);
+
+    $response = $this->actingAs($staff)->get(route('admin.staffList'));
+    $response->assertForbidden();
 });
