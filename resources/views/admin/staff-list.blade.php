@@ -5,7 +5,7 @@
     <div class="card-header bg-transparent py-3 px-4 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-3" style="border-bottom: 1.5px solid #000000 !important;">
         <div class="d-flex align-items-center gap-2">
             <h5 class="card-title mb-0 fw-bold fs-6" style="color: var(--ln-dark);">Senarai Kakitangan Berdaftar</h5>
-            <span class="badge badge-ln-neon rounded-pill px-3">{{ count($staffs) }} orang</span>
+            <span class="badge badge-ln-neon rounded-pill px-3">{{ $staffs->total() }} orang</span>
         </div>
         <a href="{{ route('admin.createStaff') }}" class="btn btn-sm btn-ln-neon px-3 rounded-pill fw-bold" style="border: 1.5px solid #000000 !important;">
             + Daftar Staf Baru
@@ -26,7 +26,7 @@
                 <tbody>
                     @forelse($staffs as $idx => $stf)
                         <tr>
-                            <td class="small fw-bold" style="color: var(--ln-text-muted);">{{ $idx + 1 }}</td>
+                            <td class="small fw-bold" style="color: var(--ln-text-muted);">{{ ($staffs->currentPage() - 1) * $staffs->perPage() + $idx + 1 }}</td>
                             <td><span class="badge badge-ln-neon fw-semibold">{{ $stf->staff_id }}</span></td>
                             <td class="text-start fw-semibold text-uppercase" style="color: var(--ln-dark);">{{ $stf->name }}</td>
                             <td class="small font-monospace" style="color: var(--ln-text-muted);">{{ $stf->created_at ? $stf->created_at->format('d/m/Y') : '-' }}</td>
@@ -61,6 +61,16 @@
             </table>
         </div>
     </div>
+    @if($staffs->hasPages())
+        <div class="card-footer bg-transparent py-3 px-4 border-top d-flex flex-wrap justify-content-between align-items-center gap-2" style="border-top: 1.5px solid #000000 !important;">
+            <div class="small fw-semibold" style="color: var(--ln-text-muted);">
+                Menunjukkan {{ $staffs->firstItem() ?? 0 }} hingga {{ $staffs->lastItem() ?? 0 }} daripada {{ $staffs->total() }} staf
+            </div>
+            <div>
+                {{ $staffs->links() }}
+            </div>
+        </div>
+    @endif
 </div>
 @endsection
 

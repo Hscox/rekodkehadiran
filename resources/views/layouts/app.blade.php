@@ -150,6 +150,42 @@
             border: 1.5px solid #000000 !important;
             color: #991b1b !important;
         }
+
+        .pagination {
+            margin-bottom: 0;
+            gap: 4px;
+        }
+
+        .page-link {
+            color: var(--ln-dark) !important;
+            background-color: #ffffff !important;
+            border: 1.5px solid #000000 !important;
+            border-radius: 8px !important;
+            font-weight: 600;
+            padding: 0.35rem 0.75rem;
+            font-size: 0.85rem;
+            box-shadow: none !important;
+        }
+
+        .page-link:hover {
+            background-color: var(--ln-neon) !important;
+            color: #000000 !important;
+            border-color: #000000 !important;
+        }
+
+        .page-item.active .page-link {
+            background-color: var(--ln-neon) !important;
+            color: #000000 !important;
+            border-color: #000000 !important;
+            font-weight: 800;
+        }
+
+        .page-item.disabled .page-link {
+            color: var(--ln-text-muted) !important;
+            background-color: #f1f5f9 !important;
+            border-color: #cbd5e1 !important;
+            opacity: 0.6;
+        }
     </style>
 </head>
 <body>

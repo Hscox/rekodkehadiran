@@ -10,6 +10,7 @@
 </div>
 
 <table border="1" cellpadding="4" cellspacing="0" style="width: 100%; font-size: 8.5pt; border-collapse: collapse;">
+
     <thead>
         <tr style="background-color: #f2f2f2; font-weight: bold; text-align: center;">
             <th style="width: 8%;">HB</th>

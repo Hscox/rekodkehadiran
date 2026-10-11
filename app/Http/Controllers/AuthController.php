@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
-    public function showLoginForm()
+    public function showLoginForm(): View|RedirectResponse
     {
         if (Auth::check()) {
             return Auth::user()->role === 'admin'
@@ -18,7 +20,8 @@ class AuthController extends Controller
         return view('auth.login');
     }
 
-    public function login(Request $request)
+    // recognize lowercase (eg. stf001 instead of STF001) {#531,19}
+    public function login(Request $request): RedirectResponse
     {
         $credentials = $request->validate([
             'staff_id' => 'required|string',
@@ -38,7 +41,7 @@ class AuthController extends Controller
         ])->onlyInput('staff_id');
     }
 
-    public function logout(Request $request)
+    public function logout(Request $request): RedirectResponse
     {
         Auth::logout();
         $request->session()->invalidate();

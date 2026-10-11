@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Attendance;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use TCPDF;
 
@@ -33,9 +36,12 @@ class AttendanceController extends Controller
         }
     }
 
-    public function dashboard()
+    public function dashboard(): View|RedirectResponse
     {
-        if (Auth::user()->role === 'admin') {
+        /** @var User $currentUser */
+        $currentUser = Auth::user();
+
+        if ($currentUser->role === 'admin') {
             return redirect()->route('report');
         }
 
@@ -43,18 +49,18 @@ class AttendanceController extends Controller
 
         $today = Carbon::today()->toDateString();
 
-        $todayAttendance = Attendance::where('user_id', Auth::id())
+        $todayAttendance = Attendance::where('user_id', $currentUser->id)
             ->where('date', $today)
             ->orderBy('clock_in', 'asc')
             ->get();
 
-        $activeClockIn = Attendance::where('user_id', Auth::id())
+        $activeClockIn = Attendance::where('user_id', $currentUser->id)
             ->where('date', $today)
             ->whereNull('clock_out')
             ->where('is_absent', false)
             ->first();
 
-        $absentToday = Attendance::where('user_id', Auth::id())
+        $absentToday = Attendance::where('user_id', $currentUser->id)
             ->where('date', $today)
             ->where('is_absent', true)
             ->first();
@@ -62,9 +68,12 @@ class AttendanceController extends Controller
         return view('dashboard', compact('todayAttendance', 'activeClockIn', 'absentToday'));
     }
 
-    public function clockIn(Request $request)
+    public function clockIn(Request $request): RedirectResponse
     {
-        if (Auth::user()->role === 'admin') {
+        /** @var User $currentUser */
+        $currentUser = Auth::user();
+
+        if ($currentUser->role === 'admin') {
             return back()->with('error', 'Akaun Admin tidak dibenarkan untuk clock in.');
         }
 
@@ -72,7 +81,7 @@ class AttendanceController extends Controller
 
         $today = Carbon::today()->toDateString();
 
-        $absentToday = Attendance::where('user_id', Auth::id())
+        $absentToday = Attendance::where('user_id', $currentUser->id)
             ->where('date', $today)
             ->where('is_absent', true)
             ->exists();
@@ -81,7 +90,7 @@ class AttendanceController extends Controller
             return back()->with('error', 'Anda sudah melaporkan tidak hadir hari ini. Tidak boleh clock in.');
         }
 
-        $existingActive = Attendance::where('user_id', Auth::id())
+        $existingActive = Attendance::where('user_id', $currentUser->id)
             ->where('date', $today)
             ->whereNull('clock_out')
             ->first();
@@ -91,7 +100,7 @@ class AttendanceController extends Controller
         }
 
         Attendance::create([
-            'user_id' => Auth::id(),
+            'user_id' => $currentUser->id,
             'date' => $today,
             'clock_in' => Carbon::now()->toTimeString(),
             'remarks' => $request->remarks,
@@ -101,9 +110,12 @@ class AttendanceController extends Controller
         return back()->with('success', 'Berjaya clock in pada '.Carbon::now()->format('h:i A'));
     }
 
-    public function clockOut()
+    public function clockOut(): RedirectResponse
     {
-        if (Auth::user()->role === 'admin') {
+        /** @var User $currentUser */
+        $currentUser = Auth::user();
+
+        if ($currentUser->role === 'admin') {
             return back()->with('error', 'Akaun Admin tidak dibenarkan untuk clock out.');
         }
 
@@ -111,7 +123,7 @@ class AttendanceController extends Controller
 
         $today = Carbon::today()->toDateString();
 
-        $attendance = Attendance::where('user_id', Auth::id())
+        $attendance = Attendance::where('user_id', $currentUser->id)
             ->where('date', $today)
             ->whereNull('clock_out')
             ->latest()
@@ -128,9 +140,12 @@ class AttendanceController extends Controller
         return back()->with('error', 'Tiada rekod clock in aktif.');
     }
 
-    public function reportAbsent(Request $request)
+    public function reportAbsent(Request $request): RedirectResponse
     {
-        if (Auth::user()->role === 'admin') {
+        /** @var User $currentUser */
+        $currentUser = Auth::user();
+
+        if ($currentUser->role === 'admin') {
             return back()->with('error', 'Akaun Admin tidak dibenarkan untuk menghantar keterangan tidak hadir.');
         }
 
@@ -140,7 +155,7 @@ class AttendanceController extends Controller
 
         $today = Carbon::today()->toDateString();
 
-        $existingRecord = Attendance::where('user_id', Auth::id())
+        $existingRecord = Attendance::where('user_id', $currentUser->id)
             ->where('date', $today)
             ->where('is_absent', false)
             ->exists();
@@ -149,7 +164,7 @@ class AttendanceController extends Controller
             return back()->with('error', 'Anda sudah mempunyai rekod clock in hari ini. Tidak boleh lapor tidak hadir.');
         }
 
-        $alreadyAbsent = Attendance::where('user_id', Auth::id())
+        $alreadyAbsent = Attendance::where('user_id', $currentUser->id)
             ->where('date', $today)
             ->where('is_absent', true)
             ->exists();
@@ -159,7 +174,7 @@ class AttendanceController extends Controller
         }
 
         Attendance::create([
-            'user_id' => Auth::id(),
+            'user_id' => $currentUser->id,
             'date' => $today,
             'clock_in' => null,
             'clock_out' => null,
@@ -170,25 +185,27 @@ class AttendanceController extends Controller
         return back()->with('success', 'Keterangan tidak hadir berjaya dihantar.');
     }
 
-    public function monthlyReport(Request $request)
+    public function monthlyReport(Request $request): View
     {
         self::autoClockOutForgottenSessions();
 
         $month = (int) $request->get('month', Carbon::now()->month);
         $year = (int) $request->get('year', Carbon::now()->year);
 
-        if (Auth::user()->role === 'admin') {
+        /** @var User $currentUser */
+        $currentUser = Auth::user();
+
+        if ($currentUser->role === 'admin') {
             $allStaffs = User::where('role', 'staff')->orderBy('name', 'asc')->get();
 
             $selectedUserId = $request->filled('user_id')
-                ? $request->user_id
+                ? (int) $request->user_id
                 : optional($allStaffs->first())->id;
 
-            $selectedUser = $selectedUserId ? User::where('role', 'staff')->find($selectedUserId) : null;
+            $selectedUser = $selectedUserId ? User::where('role', 'staff')->where('id', $selectedUserId)->first() : null;
         } else {
             $allStaffs = [];
-            $selectedUserId = Auth::id();
-            $selectedUser = Auth::user();
+            $selectedUser = $currentUser;
         }
 
         $calculated = $selectedUser ? $this->calculateMonthlyData($selectedUser, $month, $year) : [
@@ -206,50 +223,60 @@ class AttendanceController extends Controller
         ));
     }
 
-    // tcpdf function to export monthly report to pdf
-    public function exportPdf(Request $request)
+    // TCPDF logic - handles generating a downloadable pdf report {#129,62}
+    public function exportPdf(Request $request): Response|RedirectResponse
     {
         self::autoClockOutForgottenSessions();
 
+        // checks for month and year in the request, defaults to current month and year if not provided
         $month = (int) $request->get('month', Carbon::now()->month);
         $year = (int) $request->get('year', Carbon::now()->year);
 
-        if (Auth::user()->role === 'admin') {
+        /** @var User $currentUser */
+        $currentUser = Auth::user();
+
+        // checks if the current user is an admin, if so, retrieves all staff users and selects the user based on the request or defaults to the first staff user
+        if ($currentUser->role === 'admin') {
             $allStaffs = User::where('role', 'staff')->orderBy('name', 'asc')->get();
             $selectedUserId = $request->filled('user_id')
-                ? $request->user_id
+                ? (int) $request->user_id
                 : optional($allStaffs->first())->id;
 
-            $selectedUser = $selectedUserId ? User::where('role', 'staff')->find($selectedUserId) : null;
+            $selectedUser = $selectedUserId ? User::where('role', 'staff')->where('id', $selectedUserId)->first() : null;
         } else {
-            $selectedUser = Auth::user();
+            $selectedUser = $currentUser;
         }
 
         if (! $selectedUser) {
             return back()->with('error', 'Kakitangan tidak dijumpai.');
         }
 
+        // calculates the monthly data for the selected user, month, and year
         $calculated = $this->calculateMonthlyData($selectedUser, $month, $year);
         $reportData = $calculated['reportData'];
         $grandTotalFormatted = $calculated['grandTotalFormatted'];
         $totalSkor = $calculated['totalSkor'];
 
+        // initializes a new TCPDF instance and sets up the PDF document properties
         $pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
 
+        // sets the document information and formatting options for the PDF
         $pdf->SetCreator('Sistem Kehadiran');
         $pdf->SetAuthor('HR');
         $pdf->SetTitle('Laporan Kehadiran - '.$selectedUser->name);
         $pdf->setPrintHeader(false);
         $pdf->setPrintFooter(false);
-        $pdf->SetMargins(15, 15, 15);
+        $pdf->SetMargins(15, 15, 15); // left, top, right margins
         $pdf->SetAutoPageBreak(true, 15);
         $pdf->SetFont('helvetica', '', 9);
         $pdf->AddPage();
 
+        // takes blade file (resources/views/reports/pdf.blade.php) and renders it into HTML, then writes that HTML into the PDF document
         $html = view('reports.pdf', compact(
             'selectedUser', 'month', 'year', 'reportData', 'grandTotalFormatted', 'totalSkor'
         ))->render();
 
+        // html is written to the PDF document
         $pdf->writeHTML($html, true, false, true, false, '');
 
         $fileName = 'Laporan_Kehadiran_'.$selectedUser->staff_id.'_'.$month.'_'.$year.'.pdf';
@@ -260,6 +287,9 @@ class AttendanceController extends Controller
         ]);
     }
 
+    /**
+     * @return array{reportData: array<int, array{hb: int, keterangan: string, sessions: array<int, array{masuk: string, keluar: string, tempoh: string}>, jumlah_masa: string, skor: string}>, grandTotalFormatted: string, totalSkor: float}
+     */
     protected function calculateMonthlyData(User $user, int $month, int $year): array
     {
         $reportData = [];

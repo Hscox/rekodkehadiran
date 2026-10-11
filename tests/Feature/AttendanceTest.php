@@ -415,3 +415,18 @@ test('non-admin cannot access admin staff list page', function () {
     $response = $this->actingAs($staff)->get(route('admin.staffList'));
     $response->assertForbidden();
 });
+
+test('admin staff list is paginated when there are more than 10 staff', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+    ]);
+
+    User::factory()->count(15)->create([
+        'role' => 'staff',
+    ]);
+
+    $response = $this->actingAs($admin)->get(route('admin.staffList'));
+    $response->assertOk();
+    $response->assertSee('Menunjukkan');
+    $response->assertSee('daripada 15 staf');
+});

@@ -3,24 +3,26 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
 class AdminController extends Controller
 {
-    public function staffList()
+    public function staffList(): View
     {
         if (Auth::user()->role !== 'admin') {
             abort(403, 'Akses tidak dibenarkan.');
         }
 
-        $staffs = User::where('role', 'staff')->orderBy('created_at', 'desc')->get();
+        $staffs = User::where('role', 'staff')->orderBy('created_at', 'desc')->paginate(10);
 
         return view('admin.staff-list', compact('staffs'));
     }
 
-    public function createStaffForm()
+    public function createStaffForm(): View
     {
         if (Auth::user()->role !== 'admin') {
             abort(403, 'Akses tidak dibenarkan.');
@@ -29,7 +31,7 @@ class AdminController extends Controller
         return view('admin.create-staff');
     }
 
-    public function storeStaff(Request $request)
+    public function storeStaff(Request $request): RedirectResponse
     {
         if (Auth::user()->role !== 'admin') {
             abort(403, 'Akses tidak dibenarkan.');
@@ -51,7 +53,7 @@ class AdminController extends Controller
         return redirect()->route('admin.staffList')->with('success', 'Akaun staf berjaya didaftarkan.');
     }
 
-    public function editStaffForm(int $id)
+    public function editStaffForm(int $id): View
     {
         if (Auth::user()->role !== 'admin') {
             abort(403, 'Akses tidak dibenarkan.');
@@ -62,7 +64,7 @@ class AdminController extends Controller
         return view('admin.edit-staff', compact('staff'));
     }
 
-    public function updateStaff(Request $request, int $id)
+    public function updateStaff(Request $request, int $id): RedirectResponse
     {
         if (Auth::user()->role !== 'admin') {
             abort(403, 'Akses tidak dibenarkan.');
@@ -88,7 +90,7 @@ class AdminController extends Controller
         return redirect()->route('admin.staffList')->with('success', 'Maklumat staf berjaya dikemaskini.');
     }
 
-    public function deleteStaff(int $id)
+    public function deleteStaff(int $id): RedirectResponse
     {
         if (Auth::user()->role !== 'admin') {
             abort(403, 'Akses tidak dibenarkan.');
