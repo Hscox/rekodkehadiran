@@ -20,13 +20,17 @@ class AuthController extends Controller
         return view('auth.login');
     }
 
-    // recognize lowercase (eg. stf001 instead of STF001) {#531,19}
     public function login(Request $request): RedirectResponse
     {
-        $credentials = $request->validate([
+        $request->validate([
             'staff_id' => 'required|string',
             'password' => 'required|string',
         ]);
+
+        $credentials = [
+            'staff_id' => strtoupper(trim((string) $request->staff_id)),
+            'password' => (string) $request->password,
+        ];
 
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();

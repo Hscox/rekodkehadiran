@@ -27,15 +27,14 @@ class User extends Authenticatable
         return $this->hasMany(Attendance::class);
     }
 
-    // make all letter uppercase {#886,21}
     /**
      * @return Attribute<string, string>
      */
     protected function name(): Attribute
     {
         return Attribute::make(
-            get: fn (?string $value) => $value !== null ? strtoupper($value) : null, // get the value and convert to uppercase
-            set: fn (?string $value) => $value !== null ? strtoupper(trim($value)) : null, // set the value and convert to uppercase
+            get: fn (?string $value) => $value !== null ? strtoupper($value) : null,
+            set: fn (?string $value) => $value !== null ? strtoupper(trim($value)) : null,
         );
     }
 
@@ -45,8 +44,8 @@ class User extends Authenticatable
     protected function staffId(): Attribute
     {
         return Attribute::make(
-            get: fn (?string $value) => $value !== null ? strtoupper($value) : null, // get the value and convert to uppercase
-            set: fn (?string $value) => $value !== null ? strtoupper(trim($value)) : null, // set the value and convert to uppercase
+            get: fn (?string $value) => $value !== null ? strtoupper($value) : null,
+            set: fn (?string $value) => $value !== null ? strtoupper(trim($value)) : null,
         );
     }
 

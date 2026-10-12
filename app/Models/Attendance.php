@@ -20,6 +20,11 @@ class Attendance extends Model
         'clock_out',
         'remarks',
         'is_absent',
+        'session_type',
+        'status',
+        'proposed_clock_out',
+        'appeal_reason',
+        'approved_by',
     ];
 
     /**
@@ -28,6 +33,14 @@ class Attendance extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
     }
 
     public function isLate(): bool

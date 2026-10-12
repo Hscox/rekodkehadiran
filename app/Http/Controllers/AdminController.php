@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Attendance;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -101,5 +102,59 @@ class AdminController extends Controller
         $staff->delete();
 
         return redirect()->route('admin.staffList')->with('success', 'Akaun staf berjaya dipadam.');
+    }
+
+    public function appealsList(): View
+    {
+        if (Auth::user()->role !== 'admin') {
+            abort(403, 'Akses tidak dibenarkan.');
+        }
+
+        $appeals = Attendance::with('user')
+            ->where('status', 'pending_approval')
+            ->orderBy('date', 'desc')
+            ->paginate(10, ['*'], 'pending_page');
+
+        $pastAppeals = Attendance::with(['user', 'approver'])
+            ->whereIn('status', ['approved', 'rejected'])
+            ->orderBy('updated_at', 'desc')
+            ->paginate(10, ['*'], 'history_page');
+
+        return view('admin.appeals', compact('appeals', 'pastAppeals'));
+    }
+
+    public function approveAppeal(int $id): RedirectResponse
+    {
+        if (Auth::user()->role !== 'admin') {
+            abort(403, 'Akses tidak dibenarkan.');
+        }
+
+        $attendance = Attendance::where('status', 'pending_approval')->findOrFail($id);
+
+        $proposedTime = $attendance->proposed_clock_out ?? '16:00:00';
+
+        $attendance->update([
+            'clock_out' => $proposedTime,
+            'status' => 'approved',
+            'approved_by' => Auth::id(),
+        ]);
+
+        return back()->with('success', 'Permohonan pengesahan keluar berjaya diluluskan.');
+    }
+
+    public function rejectAppeal(int $id): RedirectResponse
+    {
+        if (Auth::user()->role !== 'admin') {
+            abort(403, 'Akses tidak dibenarkan.');
+        }
+
+        $attendance = Attendance::where('status', 'pending_approval')->findOrFail($id);
+
+        $attendance->update([
+            'status' => 'rejected',
+            'approved_by' => Auth::id(),
+        ]);
+
+        return back()->with('success', 'Permohonan pengesahan keluar telah ditolak.');
     }
 }

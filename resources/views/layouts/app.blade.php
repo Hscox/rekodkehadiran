@@ -213,6 +213,17 @@
                         <a class="nav-link {{ request()->routeIs('admin.staffList') ? 'active' : '' }}" href="{{ route('admin.staffList') }}">Senarai Kakitangan</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('admin.appeals') ? 'active' : '' }}" href="{{ route('admin.appeals') }}">
+                            Pengesahan Keluar
+                            @php
+                                $pendingAppealsCount = \App\Models\Attendance::where('status', 'pending_approval')->count();
+                            @endphp
+                            @if($pendingAppealsCount > 0)
+                                <span class="badge bg-danger rounded-pill ms-1" style="border: 1px solid #000000;">{{ $pendingAppealsCount }}</span>
+                            @endif
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('admin.createStaff') ? 'active' : '' }}" href="{{ route('admin.createStaff') }}">Daftar Staff ID</a>
                     </li>
                 @endif
