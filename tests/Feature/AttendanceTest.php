@@ -877,3 +877,13 @@ test('points are only calculated from clock in to clock out if admin approves ap
             && $row10['keterangan'] === 'Disahkan Admin';
     });
 });
+
+test('user can log out and is redirected to login with flash success message', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->post(route('logout'));
+
+    $response->assertRedirect(route('login'));
+    $response->assertSessionHas('success', 'Anda telah berjaya log keluar.');
+    $this->assertGuest();
+});

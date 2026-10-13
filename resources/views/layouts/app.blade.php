@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
 
     <style>
         :root {
@@ -231,9 +232,9 @@
             
             <div class="d-flex align-items-center">
                 <span class="me-3 small text-dark"><strong>{{ Auth::user()->name }}</strong> <span class="badge badge-ln-neon ms-1">{{ ucfirst(Auth::user()->role) }}</span></span>
-                <form action="{{ route('logout') }}" method="POST" class="m-0" onsubmit="return confirm('Adakah anda pasti ingin log keluar?');">
+                <form id="logout-form" action="{{ route('logout') }}" method="POST" class="m-0">
                     @csrf
-                    <button type="submit" class="btn btn-logout btn-sm rounded-pill px-3">Log keluar</button>
+                    <button type="button" class="btn btn-logout btn-sm rounded-pill px-3" onclick="confirmLogout()">Log keluar</button>
                 </form>
             </div>
         </div>
@@ -241,23 +242,64 @@
 </nav>
 
 <div class="container py-4">
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show rounded-3" role="alert">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
-    @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show rounded-3" role="alert">
-            {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
     @yield('content')
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+<script>
+    // Konfigurasi Pilihan Toastr
+    toastr.options = {
+        "closeButton": true,         // Tunjuk butang pangkah (x)
+        "progressBar": true,         // Tunjuk progress bar masa tamat
+        "positionClass": "toast-top-right", // Kedudukan: atas sebelah kanan
+        "showDuration": "300",
+        "hideDuration": "1000",
+        "timeOut": "4000",           // Hilang automatik selepas 4 saat
+        "extendedTimeOut": "1000",
+        "showEasing": "swing",
+        "hideEasing": "linear",
+        "showMethod": "fadeIn",
+        "hideMethod": "fadeOut"
+    };
+
+    // Baca Session Flash daripada Laravel
+    @if(session('success'))
+        toastr.success("{{ session('success') }}", "Berjaya!");
+    @endif
+
+    @if(session('error'))
+        toastr.error("{{ session('error') }}", "Ralat!");
+    @endif
+
+    @if(session('warning'))
+        toastr.warning("{{ session('warning') }}", "Perhatian!");
+    @endif
+
+    @if(session('info'))
+        toastr.info("{{ session('info') }}", "Info");
+    @endif
+
+    // Pop-up Pengesahan Log Keluar Menggunakan Toastr
+    function confirmLogout() {
+        toastr.clear();
+
+        toastr.warning(
+            "Adakah anda pasti ingin log keluar?<div class='mt-2'>" +
+            "<button type='button' class='btn btn-dark btn-sm rounded-pill px-3' onclick='document.getElementById(\"logout-form\").submit();'>Ya, Keluar</button>" +
+            "</div>",
+            "Pengesahan Log Keluar",
+            {
+                closeButton: true,
+                progressBar: false,
+                timeOut: 0,
+                extendedTimeOut: 0,
+                tapToDismiss: false
+            }
+        );
+    }
+</script>
 </body>
 </html>
