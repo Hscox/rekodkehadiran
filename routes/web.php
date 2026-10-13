@@ -27,4 +27,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/admin/staff/{id}/edit', [AdminController::class, 'editStaffForm'])->name('admin.editStaff');
     Route::put('/admin/staff/{id}', [AdminController::class, 'updateStaff'])->name('admin.updateStaff');
     Route::delete('/admin/staff/{id}', [AdminController::class, 'deleteStaff'])->name('admin.deleteStaff');
+    Route::post('/admin/staff/{id}/restore', [AdminController::class, 'restoreStaff'])->name('admin.restoreStaff');
+    Route::delete('/admin/staff/{id}/force', [AdminController::class, 'forceDeleteStaff'])->name('admin.forceDeleteStaff');
 });

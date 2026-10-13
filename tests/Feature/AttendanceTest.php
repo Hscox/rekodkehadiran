@@ -208,7 +208,7 @@ test('non-admin cannot access admin create staff page', function () {
     $response->assertForbidden();
 });
 
-test('admin can delete staff and associated attendances are cascaded', function () {
+test('admin can soft delete staff and attendance history is preserved', function () {
     $admin = User::factory()->create([
         'role' => 'admin',
     ]);
@@ -230,13 +230,58 @@ test('admin can delete staff and associated attendances are cascaded', function 
     $response->assertRedirect();
     $response->assertSessionHas('success', 'Akaun staf berjaya dipadam.');
 
+    $this->assertSoftDeleted($staff);
+    $this->assertDatabaseHas('attendances', [
+        'user_id' => $staff->id,
+    ]);
+});
+
+test('admin can restore and force delete a soft deleted staff', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+    ]);
+
+    $staff = User::factory()->create([
+        'role' => 'staff',
+        'name' => 'Kakitangan Arkib',
+        'staff_id' => 'STF888',
+    ]);
+
+    $staff->delete();
+    $this->assertSoftDeleted($staff);
+
+    // Restore
+    $restoreResponse = $this->actingAs($admin)->post(route('admin.restoreStaff', $staff->id));
+    $restoreResponse->assertRedirect();
+    $restoreResponse->assertSessionHas('success');
+    $this->assertNotSoftDeleted($staff);
+
+    // Re-delete then force delete
+    $staff->delete();
+    $forceResponse = $this->actingAs($admin)->delete(route('admin.forceDeleteStaff', $staff->id));
+    $forceResponse->assertRedirect();
+    $forceResponse->assertSessionHas('success');
     $this->assertDatabaseMissing('users', [
         'id' => $staff->id,
     ]);
+});
 
-    $this->assertDatabaseMissing('attendances', [
-        'user_id' => $staff->id,
+test('soft deleted staff cannot login', function () {
+    $staff = User::factory()->create([
+        'role' => 'staff',
+        'staff_id' => 'STF777',
+        'password' => bcrypt('password123'),
     ]);
+
+    $staff->delete();
+
+    $response = $this->post('/login', [
+        'staff_id' => 'STF777',
+        'password' => 'password123',
+    ]);
+
+    $response->assertSessionHasErrors('staff_id');
+    $this->assertGuest();
 });
 
 test('non-admin cannot delete staff', function () {
