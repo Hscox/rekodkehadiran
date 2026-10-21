@@ -14,6 +14,7 @@ use TCPDF;
 
 class AttendanceController extends Controller
 {
+    // detect waktu sesi (eg. siang/malam) {#638,2}
     public static function detectSessionType(?string $time = null): string
     {
         $time ??= Carbon::now()->format('H:i:s');
@@ -21,6 +22,7 @@ class AttendanceController extends Controller
         return ($time >= '06:00:00' && $time <= '18:30:00') ? 'siang' : 'malam';
     }
 
+    // auto status forgot session to pending_approval {#83c,2}
     public static function autoClockOutForgottenSessions(): void
     {
         $now = Carbon::now();
@@ -38,6 +40,7 @@ class AttendanceController extends Controller
                 'status' => 'pending_approval',
             ]);
 
+        // prevent sesi malam expired tengah malam (expired 6:00 am) {#cc0,5}
         $pendingNightSessions = Attendance::where('session_type', 'malam')
             ->whereNull('clock_out')
             ->where('is_absent', false)
@@ -110,6 +113,7 @@ class AttendanceController extends Controller
         return view('dashboard', compact('todayAttendance', 'activeClockIn', 'absentToday', 'pendingAppeal'));
     }
 
+    // validation submit rayuan masa pulang dan alasan {#55d,2}
     public function submitAppeal(Request $request, int $id): RedirectResponse
     {
         /** @var User $currentUser */
@@ -130,12 +134,12 @@ class AttendanceController extends Controller
                 function (string $attribute, mixed $value, \Closure $fail): void {
                     $cleaned = trim((string) $value, " -\t\n\r\0\x0B.");
                     if ($cleaned === '') {
-                        $fail('Sila nyatakan alasan yang sah. Ruangan sebab tidak boleh dibiarkan kosong atau diisi dengan tanda (-).');
+                        $fail('Sila nyatakan alasan yang sah.');
                     }
                 },
             ],
         ], [
-            'appeal_reason.required' => 'Sila nyatakan alasan anda. Ruangan ini tidak boleh dibiarkan kosong.',
+            'appeal_reason.required' => 'Sila nyatakan alasan anda.',
             'appeal_reason.min' => 'Alasan terlalu pendek. Sila nyatakan alasan sekurang-kurangnya 3 huruf.',
         ]);
 
@@ -204,6 +208,7 @@ class AttendanceController extends Controller
         return back()->with('success', 'Berjaya clock in pada '.$now->format('h:i A').' (Sesi '.ucfirst($sessionType).')');
     }
 
+    // clock out pastu merentasi hari {#5b4,2}
     public function clockOut(): RedirectResponse
     {
         /** @var User $currentUser */
@@ -497,6 +502,7 @@ class AttendanceController extends Controller
                     continue;
                 }
 
+                // pengiraan masa merentasi hari , skor {#e02,67}
                 if ($rec->clock_in && $rec->clock_out) {
                     $start = Carbon::parse($rec->date.' '.$rec->clock_in);
                     $end = Carbon::parse($rec->date.' '.$rec->clock_out);

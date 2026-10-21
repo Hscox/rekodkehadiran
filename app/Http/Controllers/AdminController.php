@@ -157,6 +157,7 @@ class AdminController extends Controller
         return view('admin.appeals', compact('appeals', 'pastAppeals'));
     }
 
+    // admin approve alasan tubik awal {#508,2}
     public function approveAppeal(int $id): RedirectResponse
     {
         if (Auth::user()->role !== 'admin') {

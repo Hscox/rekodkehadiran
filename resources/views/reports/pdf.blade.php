@@ -1,6 +1,6 @@
 <div style="text-align: center; margin-bottom: 15px;">
     <h2 style="font-size: 13pt; margin: 0; padding: 0; font-weight: bold;">REKOD KEHADIRAN KAKITANGAN</h2>
-    <h3 style="font-size: 11pt; margin: 4px 0 0 0; padding: 0; font-weight: bold;">{{ strtoupper($selectedUser->name) }} ({{ $selectedUser->staff_id }})</h3>
+    <h3 style="font-size: 11pt; margin: 4px 0  0; padding: 0; font-weight: bold;">{{ strtoupper($selectedUser->name) }} ({{ $selectedUser->staff_id }})</h3>
     <table style="width: 100%; margin-top: 8px; font-size: 9pt;">
         <tr>
             <td style="text-align: left; width: 33%;"><strong>Tahun:</strong> {{ $year }}</td>
