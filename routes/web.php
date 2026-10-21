@@ -15,6 +15,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/clock-in', [AttendanceController::class, 'clockIn'])->name('clock.in');
     Route::post('/clock-out', [AttendanceController::class, 'clockOut'])->name('clock.out');
     Route::post('/report-absent', [AttendanceController::class, 'reportAbsent'])->name('report.absent');
+    Route::post('/report-absent-attachment', [AttendanceController::class, 'uploadAbsentAttachment'])->name('report.absent.attachment');
     Route::get('/report', [AttendanceController::class, 'monthlyReport'])->name('report');
     Route::get('/report/export-pdf', [AttendanceController::class, 'exportPdf'])->name('report.exportPdf');
     Route::get('/admin/staff', [AdminController::class, 'staffList'])->name('admin.staffList');

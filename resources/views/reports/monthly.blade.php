@@ -108,6 +108,16 @@
                                         @else
                                             <span style="color: var(--ln-dark);">{{ $row['keterangan'] }}</span>
                                         @endif
+
+                                        @if(!empty($row['attachments']))
+                                            <div class="mt-1 d-flex flex-wrap gap-1">
+                                                @foreach($row['attachments'] as $attIdx => $attPath)
+                                                    <a href="{{ asset('storage/' . $attPath) }}" target="_blank" class="badge badge-ln-neon text-decoration-none" style="font-size: 0.7rem;">
+                                                        📎 Lihat Bukti {{ count($row['attachments']) > 1 ? ($attIdx + 1) : '(MC/Cuti)' }}
+                                                    </a>
+                                                @endforeach
+                                            </div>
+                                        @endif
                                     </td>
                                 @endif
 

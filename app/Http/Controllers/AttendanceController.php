@@ -136,6 +136,7 @@ class AttendanceController extends Controller
 
         $request->validate([
             'remarks' => 'required|string|max:255',
+            'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:5120',
         ]);
 
         $today = Carbon::today()->toDateString();
@@ -158,16 +159,65 @@ class AttendanceController extends Controller
             return back()->with('error', 'Anda sudah menghantar keterangan tidak hadir untuk hari ini.');
         }
 
+        $attachmentPath = null;
+        if ($request->hasFile('attachment') && $request->file('attachment')->isValid()) {
+            $attachmentPath = $this->saveAttachment($request->file('attachment'));
+        }
+
         Attendance::create([
             'user_id' => Auth::id(),
             'date' => $today,
             'clock_in' => null,
             'clock_out' => null,
             'remarks' => $request->remarks,
+            'attachment' => $attachmentPath,
             'is_absent' => true,
         ]);
 
         return back()->with('success', 'Keterangan tidak hadir berjaya dihantar.');
+    }
+
+    public function uploadAbsentAttachment(Request $request)
+    {
+        if (Auth::user()->role === 'admin') {
+            return back()->with('error', 'Akaun Admin tidak dibenarkan.');
+        }
+
+        $request->validate([
+            'attachment' => 'required|file|mimes:pdf,jpg,jpeg,png,webp|max:5120',
+        ]);
+
+        $today = Carbon::today()->toDateString();
+
+        $absentRecord = Attendance::where('user_id', Auth::id())
+            ->where('date', $today)
+            ->where('is_absent', true)
+            ->first();
+
+        if (! $absentRecord) {
+            return back()->with('error', 'Tiada rekod tidak hadir untuk hari ini.');
+        }
+
+        $attachmentPath = $this->saveAttachment($request->file('attachment'));
+        $absentRecord->update([
+            'attachment' => $attachmentPath,
+        ]);
+
+        return back()->with('success', 'Lampiran bukti (MC / Cuti) berjaya dimuat naik.');
+    }
+
+    protected function saveAttachment(\Illuminate\Http\UploadedFile $file): string
+    {
+        $destination = storage_path('app/public/attachments');
+        if (! is_dir($destination)) {
+            mkdir($destination, 0755, true);
+        }
+
+        $extension = strtolower($file->getClientOriginalExtension() ?: ($file->guessExtension() ?: 'dat'));
+        $fileName = 'bukti_'.Auth::id().'_'. date('Ymd_His').'_'.uniqid().'.'.$extension;
+        $file->move($destination, $fileName);
+
+        return 'attachments/'.$fileName;
     }
 
     public function monthlyReport(Request $request)
@@ -272,17 +322,49 @@ class AttendanceController extends Controller
             ->orderBy('date', 'asc')
             ->orderBy('clock_in', 'asc')
             ->get()
-            ->groupBy('date');
+            ->groupBy(fn (Attendance $rec): string => Carbon::parse($rec->date)->toDateString());
 
-        foreach ($records as $date => $dayRecords) {
+        $daysInMonth = Carbon::createFromDate($year, $month, 1)->daysInMonth;
+        $today = Carbon::today()->toDateString();
+
+        for ($day = 1; $day <= $daysInMonth; $day++) {
+            $dateString = Carbon::createFromDate($year, $month, $day)->toDateString();
+            $dayRecords = $records->get($dateString);
+
+            if (! $dayRecords || $dayRecords->isEmpty()) {
+                $isNotPassed = $dateString >= $today;
+
+                $reportData[] = [
+                    'hb' => $day,
+                    'keterangan' => $isNotPassed ? '-' : 'Tidak hadir',
+                    'attachments' => [],
+                    'sessions' => [
+                        [
+                            'masuk' => '-',
+                            'keluar' => '-',
+                            'tempoh' => '-',
+                        ],
+                    ],
+                    'jumlah_masa' => $isNotPassed ? '-' : '00:00',
+                    'skor' => $isNotPassed ? '-' : '0.0',
+                ];
+
+                continue;
+            }
+
             $dailyMinutes = 0;
             $sessions = [];
             $keteranganArr = [];
+            $attachmentsArr = [];
             $isAbsentDay = false;
 
             foreach ($dayRecords as $rec) {
                 if (! empty($rec->remarks)) {
                     $keteranganArr[] = $rec->remarks;
+                }
+
+                if (! empty($rec->attachment)) {
+                    $attachmentsArr[] = $rec->attachment;
                 }
 
                 if ($rec->is_absent) {
@@ -347,8 +429,9 @@ class AttendanceController extends Controller
             $totalSkor += $skor;
 
             $reportData[] = [
-                'hb' => Carbon::parse($date)->day,
+                'hb' => $day,
                 'keterangan' => $keterangan,
+                'attachments' => $attachmentsArr,
                 'sessions' => $sessions,
                 'jumlah_masa' => sprintf('%02d:%02d', floor($dailyMinutes / 60), $dailyMinutes % 60),
                 'skor' => number_format($skor, 1),

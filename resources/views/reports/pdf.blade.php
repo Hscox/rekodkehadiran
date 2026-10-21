@@ -28,7 +28,12 @@
                 <tr>
                     @if($index === 0)
                         <td rowspan="{{ $sessionCount }}" align="center" style="font-weight: bold;">{{ $row['hb'] }}</td>
-                        <td rowspan="{{ $sessionCount }}" align="left">{{ $row['keterangan'] }}</td>
+                        <td rowspan="{{ $sessionCount }}" align="left">
+                            {{ $row['keterangan'] }}
+                            @if(!empty($row['attachments']))
+                                <span style="font-size: 7.5pt; color: #555555;">(Bukti Berlampir)</span>
+                            @endif
+                        </td>
                     @endif
 
                     <td align="center">{{ $session['masuk'] }}</td>

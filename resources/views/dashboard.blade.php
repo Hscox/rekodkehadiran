@@ -68,9 +68,30 @@
                                 Tidak hadir
                             </div>
                             <p class="small mb-2" style="color: var(--ln-text-muted);">Anda telah melaporkan tidak hadir untuk hari ini.</p>
-                            <div class="small p-2 rounded-3 border bg-white" style="border: 1.5px solid #000000 !important;">
+                            <div class="small p-2 rounded-3 border bg-white mb-3" style="border: 1.5px solid #000000 !important;">
                                 <strong style="color: var(--ln-dark);">Keterangan:</strong> <em>{{ $absentToday->remarks }}</em>
                             </div>
+
+                            @if($absentToday->attachment)
+                                <div class="mb-3">
+                                    <a href="{{ asset('storage/' . $absentToday->attachment) }}" target="_blank" class="btn btn-sm btn-ln-neon w-100 rounded-pill py-1" style="border: 1.5px solid #000000 !important;">
+                                        📎 Lihat Lampiran Bukti (MC / Cuti)
+                                    </a>
+                                </div>
+                            @endif
+
+                            <form method="POST" action="{{ route('report.absent.attachment') }}" enctype="multipart/form-data" class="pt-2 border-top" style="border-top: 1px dashed #000000 !important;">
+                                @csrf
+                                <label class="small fw-semibold d-block mb-1" style="font-size: 0.75rem; color: var(--ln-dark);">
+                                    {{ $absentToday->attachment ? 'Tukar lampiran bukti (PDF/Gambar):' : 'Muat naik sijil MC / surat cuti (PDF/Gambar):' }}
+                                </label>
+                                <div class="d-flex gap-2">
+                                    <input type="file" name="attachment" accept=".pdf,.jpg,.jpeg,.png,.webp" required class="form-control form-control-sm" style="border: 1.5px solid #000000 !important;">
+                                    <button type="submit" class="btn btn-dark btn-sm px-3 fw-bold flex-shrink-0" style="border: 1.5px solid #000000 !important;">
+                                        Simpan
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     @else
                         <div class="p-3 mb-3 rounded-3 text-start border" style="background-color: #f8fafc; border: 1.5px solid #000000 !important;">
@@ -89,15 +110,26 @@
 
                         <div class="border rounded-3 p-3 text-start" style="background-color: #f8fafc; border: 1.5px solid #000000 !important;">
                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="small fw-semibold" style="color: var(--ln-text-muted);">Lapor tidak hadir:</span>
+                                <span class="small fw-bold" style="color: var(--ln-dark);">Lapor tidak hadir / Cuti / MC:</span>
                             </div>
-                            <form method="POST" action="{{ route('report.absent') }}">
+                            <div class="d-flex flex-wrap gap-1 mb-2">
+                                <button type="button" class="btn btn-sm badge bg-white text-dark border py-1 px-2" style="border: 1px solid #000000 !important; font-weight: 600;" onclick="document.getElementById('remarks').value='Cuti Sakit (MC)'; document.getElementById('remarks').focus();">🏥 Cuti Sakit (MC)</button>
+                                <button type="button" class="btn btn-sm badge bg-white text-dark border py-1 px-2" style="border: 1px solid #000000 !important; font-weight: 600;" onclick="document.getElementById('remarks').value='Cuti Tahunan (AL)'; document.getElementById('remarks').focus();">🌴 Cuti Tahunan</button>
+                                <button type="button" class="btn btn-sm badge bg-white text-dark border py-1 px-2" style="border: 1px solid #000000 !important; font-weight: 600;" onclick="document.getElementById('remarks').value='Cuti Kecemasan (EL)'; document.getElementById('remarks').focus();">🚨 Kecemasan (EL)</button>
+                            </div>
+                            <form method="POST" action="{{ route('report.absent') }}" enctype="multipart/form-data">
                                 @csrf
                                 <div class="mb-2">
-                                    <input type="text" name="remarks" id="remarks" class="form-control form-control-sm" placeholder="Cth: MC, cuti tahunan, urusan peribadi" required style="border: 1.5px solid #000000 !important;">
+                                    <input type="text" name="remarks" id="remarks" class="form-control form-control-sm" placeholder="Sebab (Cth: Cuti Sakit MC, Cuti Tahunan)" required style="border: 1.5px solid #000000 !important;">
+                                </div>
+                                <div class="mb-2">
+                                    <label for="attachment" class="form-label small mb-1" style="font-size: 0.72rem; color: var(--ln-text-muted);">
+                                        📎 Lampirkan Sijil Sakit (MC) / Surat Cuti <span class="text-muted">(Pilihan - PDF/JPG/PNG)</span>
+                                    </label>
+                                    <input type="file" name="attachment" id="attachment" accept=".pdf,.jpg,.jpeg,.png,.webp" class="form-control form-control-sm" style="border: 1.5px solid #000000 !important;">
                                 </div>
                                 <button type="submit" class="btn btn-outline-secondary btn-sm w-100 fw-semibold rounded-2" style="border: 1.5px solid #000000 !important;">
-                                    Hantar keterangan tidak hadir
+                                    Hantar keterangan & lampiran
                                 </button>
                             </form>
                         </div>
@@ -168,6 +200,11 @@
                                         @if($att->is_absent)
                                             <span class="badge bg-danger rounded-pill">Tidak hadir</span>
                                             <div class="small mt-1" style="color: var(--ln-text-muted);"><em>{{ $att->remarks }}</em></div>
+                                            @if($att->attachment)
+                                                <a href="{{ asset('storage/' . $att->attachment) }}" target="_blank" class="badge badge-ln-neon text-decoration-none mt-1 d-inline-block">
+                                                    📎 Lihat Bukti
+                                                </a>
+                                            @endif
                                         @elseif($att->clock_out)
                                             <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">Selesai</span>
                                         @elseif($att->clock_in)
