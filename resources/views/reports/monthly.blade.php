@@ -35,8 +35,14 @@
                     @endfor
                 </select>
 
+                <select name="session_type" class="form-select form-select-sm shadow-none" style="width: auto; background-color: #ffffff; color: var(--ln-dark); border: 1.5px solid #000000 !important;">
+                    <option value="all" {{ ($sessionType ?? 'all') === 'all' ? 'selected' : '' }}>Semua Sesi</option>
+                    <option value="siang" {{ ($sessionType ?? 'all') === 'siang' ? 'selected' : '' }}>Sesi Siang</option>
+                    <option value="malam" {{ ($sessionType ?? 'all') === 'malam' ? 'selected' : '' }}>Sesi Malam</option>
+                </select>
+
                 <button type="submit" class="btn btn-sm btn-ln-neon px-3 rounded-2" style="border: 1.5px solid #000000 !important;">Cari</button>
-                <a href="{{ route('report.exportPdf', ['user_id' => $selectedUser->id, 'month' => $month, 'year' => $year]) }}" target="_blank" class="btn btn-sm btn-outline-dark px-3 rounded-2 fw-bold" style="border: 1.5px solid #000000 !important;">
+                <a href="{{ route('report.exportPdf', ['user_id' => $selectedUser->id, 'month' => $month, 'year' => $year, 'session_type' => $sessionType ?? 'all']) }}" target="_blank" class="btn btn-sm btn-outline-dark px-3 rounded-2 fw-bold" style="border: 1.5px solid #000000 !important;">
                     Cetak PDF
                 </a>
             </form>
@@ -64,6 +70,10 @@
                         <div>
                             <span class="small d-block" style="font-size: 0.72rem; color: var(--ln-text-muted);">Tempoh</span>
                             <span class="fw-semibold small" style="color: var(--ln-dark);">Bulan {{ $month }}, {{ $year }}</span>
+                        </div>
+                        <div>
+                            <span class="small d-block" style="font-size: 0.72rem; color: var(--ln-text-muted);">Sesi</span>
+                            <span class="badge {{ ($sessionType ?? 'all') === 'malam' ? 'bg-dark text-white' : 'badge-ln-neon' }} fw-semibold">{{ ($sessionType ?? 'all') === 'all' ? 'Semua' : ucfirst($sessionType) }}</span>
                         </div>
                     </div>
                 </div>
@@ -103,8 +113,14 @@
                                 @if($index === 0)
                                     <td rowspan="{{ $sessionCount }}" class="fw-bold small" style="color: var(--ln-text-muted);">{{ $row['hb'] }}</td>
                                     <td rowspan="{{ $sessionCount }}" class="text-start">
-                                        @if($row['keterangan'] === 'Tidak hadir' || str_contains($row['keterangan'], 'MC') || str_contains($row['keterangan'], 'Cuti'))
-                                             <span class="text-danger fw-semibold">{{ $row['keterangan'] }}</span>
+                                        @if($row['keterangan'] === 'Perlu pengesahan keluar')
+                                            <span class="badge bg-warning text-dark border border-dark rounded-pill">{{ $row['keterangan'] }}</span>
+                                        @elseif($row['keterangan'] === 'Disahkan Admin')
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">{{ $row['keterangan'] }}</span>
+                                        @elseif($row['keterangan'] === 'Ditolak Admin')
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">{{ $row['keterangan'] }}</span>
+                                        @elseif($row['keterangan'] === 'Tidak hadir' || str_contains($row['keterangan'], 'MC') || str_contains($row['keterangan'], 'Cuti'))
+                                            <span class="text-danger fw-semibold">{{ $row['keterangan'] }}</span>
                                         @else
                                             <span style="color: var(--ln-dark);">{{ $row['keterangan'] }}</span>
                                         @endif
@@ -122,9 +138,30 @@
                                 @endif
 
                                 <td>
+                                    @if(isset($session['session_type']) && $session['session_type'] !== '-')
+                                        <span class="badge {{ $session['session_type'] === 'malam' ? 'bg-dark text-white' : 'bg-warning-subtle text-dark' }} rounded-pill me-1" style="border: 1px solid #000000; font-size: 0.65rem;">
+                                            {{ ucfirst($session['session_type']) }}
+                                        </span>
+                                    @endif
                                     <span class="font-monospace" style="color: var(--ln-dark);">{{ $session['masuk'] }}</span>
                                 </td>
-                                <td><span class="font-monospace" style="color: var(--ln-dark);">{{ $session['keluar'] }}</span></td>
+                                <td>
+                                    @if(($session['status'] ?? 'normal') === 'pending_approval')
+                                        @if($session['keluar'] !== 'Tidak Clock Out')
+                                            <span class="fw-bold font-monospace text-danger">{{ $session['keluar'] }}</span>
+                                            <div class="text-danger fw-semibold" style="font-size: 0.68rem;">*Rayuan (Belum Sah)</div>
+                                        @else
+                                            <span class="badge bg-warning text-dark border border-dark rounded-pill" style="font-size: 0.7rem;">Tidak Clock Out</span>
+                                        @endif
+                                    @elseif(($session['status'] ?? 'normal') === 'rejected')
+                                        <span class="badge bg-danger text-white rounded-pill" style="font-size: 0.7rem;">Ditolak</span>
+                                    @elseif(($session['status'] ?? 'normal') === 'approved' && !empty($session['has_proposed']))
+                                        <span class="fw-bold font-monospace text-success">{{ $session['keluar'] }}</span>
+                                        <div class="text-success fw-semibold" style="font-size: 0.68rem;">(Disahkan Admin)</div>
+                                    @else
+                                        <span class="font-monospace" style="color: var(--ln-dark);">{{ $session['keluar'] }}</span>
+                                    @endif
+                                </td>
                                 <td class="font-monospace" style="color: var(--ln-text-muted);">{{ $session['tempoh'] }}</td>
 
                                 @if($index === 0)

@@ -5,74 +5,179 @@ namespace App\Http\Controllers;
 use App\Models\Attendance;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use TCPDF;
 
 class AttendanceController extends Controller
 {
+    // detect waktu sesi (eg. siang/malam) {#638,2}
+    public static function detectSessionType(?string $time = null): string
+    {
+        $time ??= Carbon::now()->format('H:i:s');
+
+        return ($time >= '06:00:00' && $time <= '18:30:00') ? 'siang' : 'malam';
+    }
+
+    // auto status forgot session to pending_approval {#83c,2}
     public static function autoClockOutForgottenSessions(): void
     {
-        $today = Carbon::today()->toDateString();
-        $nowTime = Carbon::now()->format('H:i:s');
+        $now = Carbon::now();
+        $today = $now->toDateString();
 
-        Attendance::where('date', '<', $today)
+        Attendance::where(function ($query) {
+            $query->where('session_type', 'siang')
+                ->orWhereNull('session_type');
+        })
+            ->where('date', '<', $today)
             ->whereNull('clock_out')
             ->where('is_absent', false)
+            ->where('status', 'normal')
             ->update([
-                'clock_out' => '18:00:00',
+                'status' => 'pending_approval',
             ]);
 
-        if ($nowTime >= '18:00:00') {
-            Attendance::where('date', $today)
-                ->whereNull('clock_out')
-                ->where('is_absent', false)
-                ->update([
-                    'clock_out' => '18:00:00',
+        // prevent sesi malam expired tengah malam (expired 6:00 am) {#cc0,5}
+        $pendingNightSessions = Attendance::where('session_type', 'malam')
+            ->whereNull('clock_out')
+            ->where('is_absent', false)
+            ->where('status', 'normal')
+            ->get();
+
+        foreach ($pendingNightSessions as $session) {
+            $clockIn = $session->clock_in ?? '00:00:00';
+            $sessionDate = Carbon::parse($session->date);
+            $expiryTime = $clockIn >= '18:30:00'
+                ? $sessionDate->copy()->addDay()->setTime(6, 0, 0)
+                : $sessionDate->copy()->setTime(6, 0, 0);
+
+            if ($now->greaterThanOrEqualTo($expiryTime)) {
+                $session->update([
+                    'status' => 'pending_approval',
                 ]);
+            }
         }
     }
 
-    public function dashboard()
+    public function dashboard(): View|RedirectResponse
     {
-        if (Auth::user()->role === 'admin') {
+        /** @var User $currentUser */
+        $currentUser = Auth::user();
+
+        if ($currentUser->role === 'admin') {
             return redirect()->route('report');
         }
 
         self::autoClockOutForgottenSessions();
 
         $today = Carbon::today()->toDateString();
+        $yesterday = Carbon::yesterday()->toDateString();
 
-        $todayAttendance = Attendance::where('user_id', Auth::id())
-            ->where('date', $today)
+        $activeClockIn = Attendance::where('user_id', $currentUser->id)
+            ->whereNull('clock_out')
+            ->where('is_absent', false)
+            ->where('status', 'normal')
+            ->latest('id')
+            ->first();
+
+        $todayAttendance = Attendance::where('user_id', $currentUser->id)
+            ->where(function ($query) use ($today, $yesterday, $activeClockIn) {
+                $query->where('date', $today);
+                if ($activeClockIn && $activeClockIn->date !== $today) {
+                    $query->orWhere('id', $activeClockIn->id);
+                } else {
+                    $query->orWhere(function ($q) use ($yesterday) {
+                        $q->where('date', $yesterday)
+                            ->where('session_type', 'malam');
+                    });
+                }
+            })
+            ->orderBy('date', 'asc')
             ->orderBy('clock_in', 'asc')
             ->get();
 
-        $activeClockIn = Attendance::where('user_id', Auth::id())
-            ->where('date', $today)
-            ->whereNull('clock_out')
-            ->where('is_absent', false)
-            ->first();
-
-        $absentToday = Attendance::where('user_id', Auth::id())
+        $absentToday = Attendance::where('user_id', $currentUser->id)
             ->where('date', $today)
             ->where('is_absent', true)
             ->first();
 
-        return view('dashboard', compact('todayAttendance', 'activeClockIn', 'absentToday'));
+        $pendingAppeal = Attendance::where('user_id', $currentUser->id)
+            ->where('status', 'pending_approval')
+            ->whereNull('proposed_clock_out')
+            ->orderBy('date', 'desc')
+            ->first();
+
+        return view('dashboard', compact('todayAttendance', 'activeClockIn', 'absentToday', 'pendingAppeal'));
     }
 
-    public function clockIn(Request $request)
+    // validation submit rayuan masa pulang dan alasan {#55d,2}
+    public function submitAppeal(Request $request, int $id): RedirectResponse
     {
-        if (Auth::user()->role === 'admin') {
+        /** @var User $currentUser */
+        $currentUser = Auth::user();
+
+        $attendance = Attendance::where('id', $id)
+            ->where('user_id', $currentUser->id)
+            ->where('status', 'pending_approval')
+            ->firstOrFail();
+
+        $request->validate([
+            'proposed_clock_out' => 'required',
+            'appeal_reason' => [
+                'required',
+                'string',
+                'min:3',
+                'max:255',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    $cleaned = trim((string) $value, " -\t\n\r\0\x0B.");
+                    if ($cleaned === '') {
+                        $fail('Sila nyatakan alasan yang sah.');
+                    }
+                },
+            ],
+        ], [
+            'appeal_reason.required' => 'Sila nyatakan alasan anda.',
+            'appeal_reason.min' => 'Alasan terlalu pendek. Sila nyatakan alasan sekurang-kurangnya 3 huruf.',
+        ]);
+
+        $proposedTime = Carbon::parse((string) $request->proposed_clock_out)->format('H:i:s');
+
+        if (($attendance->session_type ?? 'siang') === 'siang' && $attendance->clock_in) {
+            if ($proposedTime <= $attendance->clock_in) {
+                return back()->withErrors([
+                    'proposed_clock_out' => 'Waktu pulang tidak boleh lebih awal daripada waktu masuk ('.Carbon::parse($attendance->clock_in)->format('h:i A').').',
+                ])->withInput();
+            }
+        }
+
+        $attendance->update([
+            'proposed_clock_out' => $proposedTime,
+            'appeal_reason' => $request->appeal_reason,
+        ]);
+
+        return back()->with('success', 'Maklumat pengesahan waktu keluar berjaya dihantar. Menunggu kelulusan pentadbir.');
+    }
+
+    public function clockIn(Request $request): RedirectResponse
+    {
+        /** @var User $currentUser */
+        $currentUser = Auth::user();
+
+        if ($currentUser->role === 'admin') {
             return back()->with('error', 'Akaun Admin tidak dibenarkan untuk clock in.');
         }
 
         self::autoClockOutForgottenSessions();
 
-        $today = Carbon::today()->toDateString();
+        $now = Carbon::now();
+        $today = $now->toDateString();
+        $currentTime = $now->toTimeString();
+        $sessionType = self::detectSessionType($currentTime);
 
-        $absentToday = Attendance::where('user_id', Auth::id())
+        $absentToday = Attendance::where('user_id', $currentUser->id)
             ->where('date', $today)
             ->where('is_absent', true)
             ->exists();
@@ -81,9 +186,10 @@ class AttendanceController extends Controller
             return back()->with('error', 'Anda sudah melaporkan tidak hadir hari ini. Tidak boleh clock in.');
         }
 
-        $existingActive = Attendance::where('user_id', Auth::id())
-            ->where('date', $today)
+        $existingActive = Attendance::where('user_id', $currentUser->id)
             ->whereNull('clock_out')
+            ->where('is_absent', false)
+            ->where('status', 'normal')
             ->first();
 
         if ($existingActive) {
@@ -91,30 +197,34 @@ class AttendanceController extends Controller
         }
 
         Attendance::create([
-            'user_id' => Auth::id(),
+            'user_id' => $currentUser->id,
             'date' => $today,
-            'clock_in' => Carbon::now()->toTimeString(),
+            'clock_in' => $currentTime,
             'remarks' => $request->remarks,
             'is_absent' => false,
+            'session_type' => $sessionType,
         ]);
 
-        return back()->with('success', 'Berjaya clock in pada '.Carbon::now()->format('h:i A'));
+        return back()->with('success', 'Berjaya clock in pada '.$now->format('h:i A').' (Sesi '.ucfirst($sessionType).')');
     }
 
-    public function clockOut()
+    // clock out pastu merentasi hari {#5b4,2}
+    public function clockOut(): RedirectResponse
     {
-        if (Auth::user()->role === 'admin') {
+        /** @var User $currentUser */
+        $currentUser = Auth::user();
+
+        if ($currentUser->role === 'admin') {
             return back()->with('error', 'Akaun Admin tidak dibenarkan untuk clock out.');
         }
 
         self::autoClockOutForgottenSessions();
 
-        $today = Carbon::today()->toDateString();
-
-        $attendance = Attendance::where('user_id', Auth::id())
-            ->where('date', $today)
+        $attendance = Attendance::where('user_id', $currentUser->id)
             ->whereNull('clock_out')
-            ->latest()
+            ->where('is_absent', false)
+            ->where('status', 'normal')
+            ->latest('id')
             ->first();
 
         if ($attendance) {
@@ -128,9 +238,12 @@ class AttendanceController extends Controller
         return back()->with('error', 'Tiada rekod clock in aktif.');
     }
 
-    public function reportAbsent(Request $request)
+    public function reportAbsent(Request $request): RedirectResponse
     {
-        if (Auth::user()->role === 'admin') {
+        /** @var User $currentUser */
+        $currentUser = Auth::user();
+
+        if ($currentUser->role === 'admin') {
             return back()->with('error', 'Akaun Admin tidak dibenarkan untuk menghantar keterangan tidak hadir.');
         }
 
@@ -141,7 +254,7 @@ class AttendanceController extends Controller
 
         $today = Carbon::today()->toDateString();
 
-        $existingRecord = Attendance::where('user_id', Auth::id())
+        $existingRecord = Attendance::where('user_id', $currentUser->id)
             ->where('date', $today)
             ->where('is_absent', false)
             ->exists();
@@ -150,7 +263,7 @@ class AttendanceController extends Controller
             return back()->with('error', 'Anda sudah mempunyai rekod clock in hari ini. Tidak boleh lapor tidak hadir.');
         }
 
-        $alreadyAbsent = Attendance::where('user_id', Auth::id())
+        $alreadyAbsent = Attendance::where('user_id', $currentUser->id)
             ->where('date', $today)
             ->where('is_absent', true)
             ->exists();
@@ -165,7 +278,7 @@ class AttendanceController extends Controller
         }
 
         Attendance::create([
-            'user_id' => Auth::id(),
+            'user_id' => $currentUser->id,
             'date' => $today,
             'clock_in' => null,
             'clock_out' => null,
@@ -177,7 +290,7 @@ class AttendanceController extends Controller
         return back()->with('success', 'Keterangan tidak hadir berjaya dihantar.');
     }
 
-    public function uploadAbsentAttachment(Request $request)
+    public function uploadAbsentAttachment(Request $request): RedirectResponse
     {
         if (Auth::user()->role === 'admin') {
             return back()->with('error', 'Akaun Admin tidak dibenarkan.');
@@ -220,28 +333,31 @@ class AttendanceController extends Controller
         return 'attachments/'.$fileName;
     }
 
-    public function monthlyReport(Request $request)
+    public function monthlyReport(Request $request): View
     {
         self::autoClockOutForgottenSessions();
 
         $month = (int) $request->get('month', Carbon::now()->month);
         $year = (int) $request->get('year', Carbon::now()->year);
+        $sessionType = (string) $request->get('session_type', 'all');
 
-        if (Auth::user()->role === 'admin') {
+        /** @var User $currentUser */
+        $currentUser = Auth::user();
+
+        if ($currentUser->role === 'admin') {
             $allStaffs = User::where('role', 'staff')->orderBy('name', 'asc')->get();
 
             $selectedUserId = $request->filled('user_id')
-                ? $request->user_id
+                ? (int) $request->user_id
                 : optional($allStaffs->first())->id;
 
-            $selectedUser = $selectedUserId ? User::where('role', 'staff')->find($selectedUserId) : null;
+            $selectedUser = $selectedUserId ? User::where('role', 'staff')->where('id', $selectedUserId)->first() : null;
         } else {
             $allStaffs = [];
-            $selectedUserId = Auth::id();
-            $selectedUser = Auth::user();
+            $selectedUser = $currentUser;
         }
 
-        $calculated = $selectedUser ? $this->calculateMonthlyData($selectedUser, $month, $year) : [
+        $calculated = $selectedUser ? $this->calculateMonthlyData($selectedUser, $month, $year, $sessionType) : [
             'reportData' => [],
             'grandTotalFormatted' => '00:00',
             'totalSkor' => 0.0,
@@ -252,34 +368,37 @@ class AttendanceController extends Controller
         $totalSkor = $calculated['totalSkor'];
 
         return view('reports.monthly', compact(
-            'reportData', 'grandTotalFormatted', 'totalSkor', 'month', 'year', 'selectedUser', 'allStaffs'
+            'reportData', 'grandTotalFormatted', 'totalSkor', 'month', 'year', 'sessionType', 'selectedUser', 'allStaffs'
         ));
     }
 
-    // tcpdf function to export monthly report to pdf
-    public function exportPdf(Request $request)
+    public function exportPdf(Request $request): Response|RedirectResponse
     {
         self::autoClockOutForgottenSessions();
 
         $month = (int) $request->get('month', Carbon::now()->month);
         $year = (int) $request->get('year', Carbon::now()->year);
+        $sessionType = (string) $request->get('session_type', 'all');
 
-        if (Auth::user()->role === 'admin') {
+        /** @var User $currentUser */
+        $currentUser = Auth::user();
+
+        if ($currentUser->role === 'admin') {
             $allStaffs = User::where('role', 'staff')->orderBy('name', 'asc')->get();
             $selectedUserId = $request->filled('user_id')
-                ? $request->user_id
+                ? (int) $request->user_id
                 : optional($allStaffs->first())->id;
 
-            $selectedUser = $selectedUserId ? User::where('role', 'staff')->find($selectedUserId) : null;
+            $selectedUser = $selectedUserId ? User::where('role', 'staff')->where('id', $selectedUserId)->first() : null;
         } else {
-            $selectedUser = Auth::user();
+            $selectedUser = $currentUser;
         }
 
         if (! $selectedUser) {
             return back()->with('error', 'Kakitangan tidak dijumpai.');
         }
 
-        $calculated = $this->calculateMonthlyData($selectedUser, $month, $year);
+        $calculated = $this->calculateMonthlyData($selectedUser, $month, $year, $sessionType);
         $reportData = $calculated['reportData'];
         $grandTotalFormatted = $calculated['grandTotalFormatted'];
         $totalSkor = $calculated['totalSkor'];
@@ -297,7 +416,7 @@ class AttendanceController extends Controller
         $pdf->AddPage();
 
         $html = view('reports.pdf', compact(
-            'selectedUser', 'month', 'year', 'reportData', 'grandTotalFormatted', 'totalSkor'
+            'selectedUser', 'month', 'year', 'sessionType', 'reportData', 'grandTotalFormatted', 'totalSkor'
         ))->render();
 
         $pdf->writeHTML($html, true, false, true, false, '');
@@ -310,16 +429,29 @@ class AttendanceController extends Controller
         ]);
     }
 
-    protected function calculateMonthlyData(User $user, int $month, int $year): array
+    /**
+     * @return array{reportData: array<int, array{hb: int, keterangan: string, sessions: array<int, array{masuk: string, keluar: string, tempoh: string, session_type: string, status: string, has_proposed: bool}>, jumlah_masa: string, skor: string}>, grandTotalFormatted: string, totalSkor: float}
+     */
+    protected function calculateMonthlyData(User $user, int $month, int $year, string $sessionFilter = 'all'): array
     {
         $reportData = [];
         $grandTotalMinutes = 0;
         $totalSkor = 0.0;
 
-        $records = Attendance::where('user_id', $user->id)
+        $query = Attendance::where('user_id', $user->id)
             ->whereYear('date', $year)
-            ->whereMonth('date', $month)
-            ->orderBy('date', 'asc')
+            ->whereMonth('date', $month);
+
+        if ($sessionFilter === 'siang') {
+            $query->where(function ($q) {
+                $q->where('session_type', 'siang')
+                    ->orWhereNull('session_type');
+            });
+        } elseif ($sessionFilter === 'malam') {
+            $query->where('session_type', 'malam');
+        }
+
+        $records = $query->orderBy('date', 'asc')
             ->orderBy('clock_in', 'asc')
             ->get()
             ->groupBy(fn (Attendance $rec): string => Carbon::parse($rec->date)->toDateString());
@@ -343,6 +475,9 @@ class AttendanceController extends Controller
                             'masuk' => '-',
                             'keluar' => '-',
                             'tempoh' => '-',
+                            'session_type' => '-',
+                            'status' => 'normal',
+                            'has_proposed' => false,
                         ],
                     ],
                     'jumlah_masa' => $isNotPassed ? '-' : '00:00',
@@ -367,17 +502,63 @@ class AttendanceController extends Controller
                     $attachmentsArr[] = $rec->attachment;
                 }
 
+                $recSessionType = $rec->session_type ?? 'siang';
+
                 if ($rec->is_absent) {
                     $isAbsentDay = true;
                     $sessions[] = [
                         'masuk' => '-',
                         'keluar' => '-',
                         'tempoh' => '-',
+                        'session_type' => $recSessionType,
+                        'status' => 'normal',
+                        'has_proposed' => false,
                     ];
 
                     continue;
                 }
 
+                if ($rec->status === 'pending_approval') {
+                    $start = $rec->clock_in ? Carbon::parse($rec->date.' '.$rec->clock_in) : null;
+                    $proposedStr = 'Tidak Clock Out';
+                    if ($rec->proposed_clock_out && $start) {
+                        $proposed = Carbon::parse($rec->date.' '.$rec->proposed_clock_out);
+                        if ($proposed->lessThan($start)) {
+                            $proposed->addDay();
+                        }
+                        $proposedStr = $proposed->format('h:i A');
+                    }
+                    $keteranganArr[] = 'Perlu pengesahan keluar';
+
+                    $sessions[] = [
+                        'masuk' => $start ? $start->format('h:i A') : '-',
+                        'keluar' => $proposedStr,
+                        'tempoh' => '-',
+                        'session_type' => $recSessionType,
+                        'status' => 'pending_approval',
+                        'has_proposed' => ! empty($rec->proposed_clock_out),
+                    ];
+
+                    continue;
+                }
+
+                if ($rec->status === 'rejected') {
+                    $start = $rec->clock_in ? Carbon::parse($rec->date.' '.$rec->clock_in) : null;
+                    $keteranganArr[] = 'Ditolak Admin';
+
+                    $sessions[] = [
+                        'masuk' => $start ? $start->format('h:i A') : '-',
+                        'keluar' => '-',
+                        'tempoh' => '-',
+                        'session_type' => $recSessionType,
+                        'status' => 'rejected',
+                        'has_proposed' => ! empty($rec->proposed_clock_out),
+                    ];
+
+                    continue;
+                }
+
+                // pengiraan masa merentasi hari , skor {#e02,67}
                 if ($rec->clock_in && $rec->clock_out) {
                     $start = Carbon::parse($rec->date.' '.$rec->clock_in);
                     $end = Carbon::parse($rec->date.' '.$rec->clock_out);
@@ -387,10 +568,17 @@ class AttendanceController extends Controller
                     $diffMinutes = (int) abs($start->diffInMinutes($end));
                     $dailyMinutes += $diffMinutes;
 
+                    if ($rec->status === 'approved') {
+                        $keteranganArr[] = 'Disahkan Admin';
+                    }
+
                     $sessions[] = [
                         'masuk' => $start->format('h:i A'),
                         'keluar' => $end->format('h:i A'),
                         'tempoh' => sprintf('%02d:%02d', floor($diffMinutes / 60), $diffMinutes % 60),
+                        'session_type' => $recSessionType,
+                        'status' => $rec->status,
+                        'has_proposed' => ! empty($rec->proposed_clock_out),
                     ];
                 } elseif ($rec->clock_in) {
                     $start = Carbon::parse($rec->date.' '.$rec->clock_in);
@@ -398,18 +586,32 @@ class AttendanceController extends Controller
                         'masuk' => $start->format('h:i A'),
                         'keluar' => 'Sedang Bertugas',
                         'tempoh' => '-',
+                        'session_type' => $recSessionType,
+                        'status' => 'normal',
+                        'has_proposed' => false,
                     ];
                 } else {
                     $sessions[] = [
                         'masuk' => '-',
                         'keluar' => '-',
                         'tempoh' => '-',
+                        'session_type' => $recSessionType,
+                        'status' => 'normal',
+                        'has_proposed' => false,
                     ];
                 }
             }
 
             if ($isAbsentDay) {
                 $keterangan = ! empty($keteranganArr) ? implode(', ', $keteranganArr) : 'Tidak hadir';
+                $dailyMinutes = 0;
+                $skor = 0.0;
+            } elseif (in_array('Perlu pengesahan keluar', $keteranganArr, true)) {
+                $keterangan = 'Perlu pengesahan keluar';
+                $dailyMinutes = 0;
+                $skor = 0.0;
+            } elseif (in_array('Ditolak Admin', $keteranganArr, true)) {
+                $keterangan = 'Ditolak Admin';
                 $dailyMinutes = 0;
                 $skor = 0.0;
             } else {

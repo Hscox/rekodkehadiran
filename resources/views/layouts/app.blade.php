@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
 
     <style>
         :root {
@@ -150,6 +151,42 @@
             border: 1.5px solid #000000 !important;
             color: #991b1b !important;
         }
+
+        .pagination {
+            margin-bottom: 0;
+            gap: 4px;
+        }
+
+        .page-link {
+            color: var(--ln-dark) !important;
+            background-color: #ffffff !important;
+            border: 1.5px solid #000000 !important;
+            border-radius: 8px !important;
+            font-weight: 600;
+            padding: 0.35rem 0.75rem;
+            font-size: 0.85rem;
+            box-shadow: none !important;
+        }
+
+        .page-link:hover {
+            background-color: var(--ln-neon) !important;
+            color: #000000 !important;
+            border-color: #000000 !important;
+        }
+
+        .page-item.active .page-link {
+            background-color: var(--ln-neon) !important;
+            color: #000000 !important;
+            border-color: #000000 !important;
+            font-weight: 800;
+        }
+
+        .page-item.disabled .page-link {
+            color: var(--ln-text-muted) !important;
+            background-color: #f1f5f9 !important;
+            border-color: #cbd5e1 !important;
+            opacity: 0.6;
+        }
     </style>
 </head>
 <body>
@@ -177,6 +214,17 @@
                         <a class="nav-link {{ request()->routeIs('admin.staffList') ? 'active' : '' }}" href="{{ route('admin.staffList') }}">Senarai Kakitangan</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('admin.appeals') ? 'active' : '' }}" href="{{ route('admin.appeals') }}">
+                            Pengesahan Keluar
+                            @php
+                                $pendingAppealsCount = \App\Models\Attendance::where('status', 'pending_approval')->count();
+                            @endphp
+                            @if($pendingAppealsCount > 0)
+                                <span class="badge bg-danger rounded-pill ms-1" style="border: 1px solid #000000;">{{ $pendingAppealsCount }}</span>
+                            @endif
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('admin.createStaff') ? 'active' : '' }}" href="{{ route('admin.createStaff') }}">Daftar Staff ID</a>
                     </li>
                 @endif
@@ -184,9 +232,9 @@
             
             <div class="d-flex align-items-center">
                 <span class="me-3 small text-dark"><strong>{{ Auth::user()->name }}</strong> <span class="badge badge-ln-neon ms-1">{{ ucfirst(Auth::user()->role) }}</span></span>
-                <form action="{{ route('logout') }}" method="POST" class="m-0" onsubmit="return confirm('Adakah anda pasti ingin log keluar?');">
+                <form id="logout-form" action="{{ route('logout') }}" method="POST" class="m-0">
                     @csrf
-                    <button type="submit" class="btn btn-logout btn-sm rounded-pill px-3">Log keluar</button>
+                    <button type="button" class="btn btn-logout btn-sm rounded-pill px-3" onclick="confirmLogout()">Log keluar</button>
                 </form>
             </div>
         </div>
@@ -194,23 +242,64 @@
 </nav>
 
 <div class="container py-4">
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show rounded-3" role="alert">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
-    @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show rounded-3" role="alert">
-            {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
     @yield('content')
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+<script>
+    // Konfigurasi Pilihan Toastr
+    toastr.options = {
+        "closeButton": true,         // Tunjuk butang pangkah (x)
+        "progressBar": true,         // Tunjuk progress bar masa tamat
+        "positionClass": "toast-top-right", // Kedudukan: atas sebelah kanan
+        "showDuration": "300",
+        "hideDuration": "1000",
+        "timeOut": "4000",           // Hilang automatik selepas 4 saat
+        "extendedTimeOut": "1000",
+        "showEasing": "swing",
+        "hideEasing": "linear",
+        "showMethod": "fadeIn",
+        "hideMethod": "fadeOut"
+    };
+
+    // Baca Session Flash daripada Laravel
+    @if(session('success'))
+        toastr.success("{{ session('success') }}", "Berjaya!");
+    @endif
+
+    @if(session('error'))
+        toastr.error("{{ session('error') }}", "Ralat!");
+    @endif
+
+    @if(session('warning'))
+        toastr.warning("{{ session('warning') }}", "Perhatian!");
+    @endif
+
+    @if(session('info'))
+        toastr.info("{{ session('info') }}", "Info");
+    @endif
+
+    // Pop-up Pengesahan Log Keluar Menggunakan Toastr
+    function confirmLogout() {
+        toastr.clear();
+
+        toastr.warning(
+            "Adakah anda pasti ingin log keluar?<div class='mt-2'>" +
+            "<button type='button' class='btn btn-dark btn-sm rounded-pill px-3' onclick='document.getElementById(\"logout-form\").submit();'>Ya, Keluar</button>" +
+            "</div>",
+            "Pengesahan Log Keluar",
+            {
+                closeButton: true,
+                progressBar: false,
+                timeOut: 0,
+                extendedTimeOut: 0,
+                tapToDismiss: false
+            }
+        );
+    }
+</script>
 </body>
 </html>

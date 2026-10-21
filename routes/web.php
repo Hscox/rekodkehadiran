@@ -16,12 +16,18 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/clock-out', [AttendanceController::class, 'clockOut'])->name('clock.out');
     Route::post('/report-absent', [AttendanceController::class, 'reportAbsent'])->name('report.absent');
     Route::post('/report-absent-attachment', [AttendanceController::class, 'uploadAbsentAttachment'])->name('report.absent.attachment');
+    Route::post('/attendance/appeal/{id}', [AttendanceController::class, 'submitAppeal'])->name('attendance.submitAppeal');
     Route::get('/report', [AttendanceController::class, 'monthlyReport'])->name('report');
     Route::get('/report/export-pdf', [AttendanceController::class, 'exportPdf'])->name('report.exportPdf');
     Route::get('/admin/staff', [AdminController::class, 'staffList'])->name('admin.staffList');
+    Route::get('/admin/appeals', [AdminController::class, 'appealsList'])->name('admin.appeals');
+    Route::post('/admin/appeals/{id}/approve', [AdminController::class, 'approveAppeal'])->name('admin.approveAppeal');
+    Route::post('/admin/appeals/{id}/reject', [AdminController::class, 'rejectAppeal'])->name('admin.rejectAppeal');
     Route::get('/admin/create-staff', [AdminController::class, 'createStaffForm'])->name('admin.createStaff');
     Route::post('/admin/create-staff', [AdminController::class, 'storeStaff']);
     Route::get('/admin/staff/{id}/edit', [AdminController::class, 'editStaffForm'])->name('admin.editStaff');
     Route::put('/admin/staff/{id}', [AdminController::class, 'updateStaff'])->name('admin.updateStaff');
     Route::delete('/admin/staff/{id}', [AdminController::class, 'deleteStaff'])->name('admin.deleteStaff');
+    Route::post('/admin/staff/{id}/restore', [AdminController::class, 'restoreStaff'])->name('admin.restoreStaff');
+    Route::delete('/admin/staff/{id}/force', [AdminController::class, 'forceDeleteStaff'])->name('admin.forceDeleteStaff');
 });
