@@ -31,3 +31,5 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/admin/staff/{id}/restore', [AdminController::class, 'restoreStaff'])->name('admin.restoreStaff');
     Route::delete('/admin/staff/{id}/force', [AdminController::class, 'forceDeleteStaff'])->name('admin.forceDeleteStaff');
 });
+
+// Admin routes with middleware for admin access
