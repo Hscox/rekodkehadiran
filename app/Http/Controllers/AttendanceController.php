@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use TCPDF;
 
@@ -319,7 +320,7 @@ class AttendanceController extends Controller
         return back()->with('success', 'Lampiran bukti (MC / Cuti) berjaya dimuat naik.');
     }
 
-    protected function saveAttachment(\Illuminate\Http\UploadedFile $file): string
+    protected function saveAttachment(UploadedFile $file): string
     {
         $destination = storage_path('app/public/attachments');
         if (! is_dir($destination)) {
@@ -327,7 +328,7 @@ class AttendanceController extends Controller
         }
 
         $extension = strtolower($file->getClientOriginalExtension() ?: ($file->guessExtension() ?: 'dat'));
-        $fileName = 'bukti_'.Auth::id().'_'. date('Ymd_His').'_'.uniqid().'.'.$extension;
+        $fileName = 'bukti_'.Auth::id().'_'.date('Ymd_His').'_'.uniqid().'.'.$extension;
         $file->move($destination, $fileName);
 
         return 'attachments/'.$fileName;
