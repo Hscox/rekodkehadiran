@@ -33,3 +33,4 @@ Route::middleware(['auth'])->group(function () {
 });
 
 // Admin routes with middleware for admin access
+// Route::middleware(['auth', 'admin'])->group(function () {
